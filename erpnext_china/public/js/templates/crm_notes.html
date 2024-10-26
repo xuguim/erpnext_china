@@ -1,11 +1,11 @@
 <div class="notes-section col-xs-12">
 
     <h3>销售反馈模板：</h3>
-    <ul>
-        <li>电话是否打通</li>
-        <li>微信是否通过</li>
-        <li>线索有效/无效情况详细说明</li>
-    </ul>
+    <div style="margin-bottom: 10px;">
+        <span>电话是否打通</span><br>
+        <span>微信是否通过</span><br>
+        <span>线索有效/无效情况详细说明</span><br>
+    </div>
     {% if (!frappe.last_request.name || frappe.get_doc("Lead", frappe.last_request.name).custom_sea == '私海') { %}
     <div class="new-btn pb-3">
         <button class="btn btn-sm small new-note-btn mr-1">
