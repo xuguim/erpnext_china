@@ -67,9 +67,24 @@ frappe.ui.form.on('Lead', {
                             }
                         ],
                         size: 'small',
-                        primary_action_label: 'Submit',
+                        primary_action_label: '确定',
                         primary_action(values) {
-                            const content = values['content'];
+                            let content = values['content'];
+                            content = content.trim()
+                            if(content.length < 3){
+                                frappe.throw("内容必须大于3个字！")
+                            }
+                            const firstChar = content[0];
+                            let isDieci = true;
+                            for (let i = 1; i < content.length; i++) {
+                                if (content[i] !== firstChar) {
+                                    isDieci = false
+                                    break
+                                }
+                            }
+                            if (isDieci) {
+                                frappe.throw("内容格式错误！")
+                            }
                             frappe.call("erpnext_china.erpnext_china.custom_form_script.lead.lead.give_up_lead", { 
                                 lead: frm.doc.name,
                                 content: "放弃原因：" + content
