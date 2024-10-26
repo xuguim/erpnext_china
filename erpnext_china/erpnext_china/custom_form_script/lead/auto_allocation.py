@@ -20,6 +20,7 @@ def lead_before_save_handle(doc):
 					to_private(doc)
 		else:
 			if auto_allocation:
+				doc._custom_comment = '自动分配'
 				auto_allocate(doc)
 			else:
 				if old_doc:

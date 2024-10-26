@@ -1,14 +1,13 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-import re
 import frappe
 
 from erpnext_china.utils.lead_tools import get_doc_or_none, remove_whitespace, add_log,get_single_contact_info
 from erpnext_china.utils.old_system_data import white_list, old_system_contacts
 from erpnext.crm.doctype.lead.lead import Lead
 import frappe.utils
-from erpnext_china.erpnext_china.custom_form_script.lead.auto_allocation import lead_before_save_handle, check_lead_total_limit, set_last_lead_owner, set_latest_note, to_public
+from erpnext_china.erpnext_china.custom_form_script.lead.auto_allocation import lead_before_save_handle, check_lead_total_limit, set_last_lead_owner, set_latest_note, to_public, to_private
 
 class CustomLead(Lead):
 	def create_contact(self):
@@ -132,32 +131,34 @@ class CustomLead(Lead):
 		doc = frappe.get_doc('User', self.owner)
 		return doc.first_name
 
-	# 提供给UI Python脚本调用
+	# 提供给UI Python脚本调用，注意这里会在before_save之前调用
 	def before_save_script(self):
-		doc = self
-		lead_before_save_handle(doc)
-	
+		self._custom_comment = '手动分配'
+		lead_before_save_handle(self)
+
 	def before_save(self):
-		doc = self
-		
 		if not self.custom_original_lead_name:
 			self.custom_employee_baidu_account = ''
 			self.custom_employee_douyin_account = ''
 
 		if self.has_value_changed("lead_owner"):
-			set_last_lead_owner(doc)
-			if not self.is_new():
-				self.lead_add_comment(f"分配给: {self.lead_owner}")
+			set_last_lead_owner(self)
 
-		if not self.is_new() and self.has_value_changed("notes"):
-			set_latest_note(doc)
+		if self.has_value_changed("notes"):
+			set_latest_note(self)
 
-	def after_insert(self):
-		if self.custom_original_lead_name:
-			text=f"初始自动分配给: {self.lead_owner}"
+		if self.is_new():
+			if not self.custom_original_lead_name:
+				self._custom_comment = f'初始手动录入，{self._custom_comment}给：{self.lead_owner}'
+			else:
+				self._custom_comment = f'初始自动录入，自动分配给：{self.lead_owner}'
 		else:
-			text=f"初始手动分配给: {self.lead_owner}"
-		self.lead_add_comment(text)
+			if self.has_value_changed("lead_owner"):
+				self._custom_comment = f"{self._custom_comment}给: {self.lead_owner}"
+				self.lead_add_comment(self._custom_comment)
+		
+	def after_insert(self):
+		self.lead_add_comment(self._custom_comment)
 		return super().after_insert()
 
 	def lead_add_comment(self, text: str):
@@ -219,6 +220,7 @@ def get_lead(**kwargs):
 			if check_lead_total_limit(employee):
 				lead.custom_lead_owner_employee = employee
 				lead.lead_owner = frappe.session.user
+				to_private(lead)
 				lead.save(ignore_permissions=True)
 				return 200
 			else:
@@ -230,9 +232,18 @@ def get_lead(**kwargs):
 @frappe.whitelist()
 def give_up_lead(**kwargs):
 	lead_name = kwargs.get('lead')
+	content = kwargs.get('content')
 	if lead_name:
 		lead = frappe.get_doc('Lead', lead_name)
 		to_public(lead)
+
+		if content:
+			lead.append("notes", {
+				"note": content,
+				"added_by": frappe.session.user,
+				"added_on": frappe.utils.get_datetime()
+			})
+
 		lead.save(ignore_permissions=True)
 		return 200
 

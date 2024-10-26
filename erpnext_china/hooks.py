@@ -57,6 +57,11 @@ doctype_js = {
     'Stock Entry':'erpnext_china/custom_form_script/stock_entry/stock_entry.js',
     'Lead': 'erpnext_china/custom_form_script/lead/lead.js'
 }
+
+doctype_list_js = {
+    'Lead Source': 'erpnext_china/custom_form_script/lead_source/lead_source_list.js'
+}
+
 permission_query_conditions = {
     "Original Leads": "erpnext_china.erpnext_china.custom_permission.original_lead.permission_original_lead.has_query_permission",
     # "Contact": "erpnext_china.erpnext_china.custom_permission.contact.permission_contact.has_query_permission",
