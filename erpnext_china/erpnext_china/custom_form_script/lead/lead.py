@@ -1,6 +1,7 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-
+import math
+import re
 import frappe
 
 from erpnext_china.utils.lead_tools import get_doc_or_none, remove_whitespace, add_log,get_single_contact_info
@@ -137,6 +138,23 @@ class CustomLead(Lead):
 		lead_before_save_handle(self)
 
 	def before_save(self):
+		doc = self
+		comment_name = frappe.db.get_list('Comment',filters={'reference_name': ['=',doc.name]},pluck='name')
+		#遍历找出comment最近的时间
+		i=0
+		for i in range(len(comment_name)):
+			last_time = frappe.db.get_value('Comment',comment_name[i],'creation')
+		for i in range(len(comment_name)):
+			if i == 0:
+				last_time = frappe.db.get_value('Comment',comment_name[i],'creation')
+			else:
+				if(frappe.db.get_value('Comment',comment_name[i],'creation')>last_time):
+					last_time = frappe.db.get_value('Comment',comment_name[i],'creation')
+		now_time = frappe.utils.get_datetime()
+		time_difference = now_time -last_time			
+		miunute_difference = math.ceil(time_difference.total_seconds()/60)
+		doc.notes[-1].custom_time_difference = miunute_difference
+		
 		if not self.custom_original_lead_name:
 			self.custom_employee_baidu_account = ''
 			self.custom_employee_douyin_account = ''
