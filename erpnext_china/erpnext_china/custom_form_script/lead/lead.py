@@ -137,23 +137,19 @@ class CustomLead(Lead):
 		self._custom_comment = '手动分配'
 		lead_before_save_handle(self)
 
+	def set_note_difference(self):
+		if not self.is_new() and self.has_value_changed("notes"):
+			comment = frappe.get_last_doc('Comment', filters={'reference_name': ['=', self.name]})
+			last_time = comment.creation
+			for note in self.notes:
+				if note.is_new():
+					now_time = frappe.utils.get_datetime()
+					time_difference = now_time -last_time		
+					miunute_difference = math.ceil(time_difference.total_seconds()/60)
+					note.custom_time_difference = miunute_difference
+	
 	def before_save(self):
-		doc = self
-		comment_name = frappe.db.get_list('Comment',filters={'reference_name': ['=',doc.name]},pluck='name')
-		#遍历找出comment最近的时间
-		i=0
-		for i in range(len(comment_name)):
-			last_time = frappe.db.get_value('Comment',comment_name[i],'creation')
-		for i in range(len(comment_name)):
-			if i == 0:
-				last_time = frappe.db.get_value('Comment',comment_name[i],'creation')
-			else:
-				if(frappe.db.get_value('Comment',comment_name[i],'creation')>last_time):
-					last_time = frappe.db.get_value('Comment',comment_name[i],'creation')
-		now_time = frappe.utils.get_datetime()
-		time_difference = now_time -last_time			
-		miunute_difference = math.ceil(time_difference.total_seconds()/60)
-		doc.notes[-1].custom_time_difference = miunute_difference
+		self.set_note_difference()
 		
 		if not self.custom_original_lead_name:
 			self.custom_employee_baidu_account = ''
