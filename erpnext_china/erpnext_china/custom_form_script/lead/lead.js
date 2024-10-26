@@ -47,6 +47,11 @@ frappe.ui.form.on('Lead', {
                 frm.set_intro();
                 frm.set_intro(__("请在右上角【行动】或【...】中点击【认领线索】查看联系方式。"));
             }
+            
+            // 如果不是管理员，则隐藏 notes子表
+            if (!frappe.user.has_role('System Manager')) {
+                frm.set_df_property("notes", "hidden", "1")
+            }
 
             // 如果当前用户是线索负责人并且当前线索没有创建客户可以放弃线索
             if (frappe.session.user == frm.doc.lead_owner && !frm.doc.__onload.is_customer) {
