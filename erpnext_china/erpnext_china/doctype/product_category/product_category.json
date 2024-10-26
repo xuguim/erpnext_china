@@ -6,7 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "category_name"
+  "category_name",
+  "sorted_index"
  ],
  "fields": [
   {
@@ -15,11 +16,19 @@
    "in_list_view": 1,
    "label": "Category Name",
    "unique": 1
+  },
+  {
+   "fieldname": "sorted_index",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Sorted Index",
+   "non_negative": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-06-29 11:59:34.294381",
+ "modified": "2024-10-24 17:48:45.672107",
  "modified_by": "Administrator",
  "module": "ERPNext China",
  "name": "Product Category",

@@ -1,6 +1,6 @@
 {
  "actions": [],
- "autoname": "field:lead",
+ "autoname": "format:CRM-LEAD-LOG-{#####}",
  "creation": "2024-10-14 09:01:35.701463",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -43,11 +43,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-14 10:30:52.763945",
+ "modified": "2024-10-21 12:09:27.728185",
  "modified_by": "Administrator",
  "module": "ERPNext China",
  "name": "Auto Allocation Log",
- "naming_rule": "By fieldname",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
