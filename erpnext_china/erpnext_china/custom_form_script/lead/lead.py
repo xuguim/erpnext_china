@@ -139,11 +139,14 @@ class CustomLead(Lead):
 
 	def set_note_difference(self):
 		if not self.is_new() and self.has_value_changed("notes"):
-			comment = frappe.get_last_doc('Comment', filters={'reference_name': ['=', self.name],'comment_type':'Comment','reference_doctype': 'Lead'})
-			last_time = comment.creation
-			for note in self.notes:
-				if note.is_new():
-					note.custom_time_difference = last_time
+			try:
+				comment = frappe.get_last_doc('Comment', filters={'reference_name': ['=', self.name],'comment_type':'Comment','reference_doctype': 'Lead'})
+				last_time = comment.creation
+				for note in self.notes:
+					if note.is_new():
+						note.custom_time_difference = last_time
+			except:
+				pass
 	
 	def before_save(self):
 		self.set_note_difference()
