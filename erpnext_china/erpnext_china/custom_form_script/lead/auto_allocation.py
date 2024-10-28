@@ -213,16 +213,12 @@ def set_latest_note(doc):
 	设置最近反馈
 	"""
 	if doc.notes and len(doc.notes) > 0:
-		notes = sorted(doc.notes, key=lambda x: frappe.utils.get_datetime(x.added_on), reverse=True)
-		latest_note = notes[0]
-		if latest_note.note and '有新的原始线索' not in str(latest_note.note):
-			doc.custom_latest_note_created_time = latest_note.added_on
-			doc.custom_latest_note = latest_note.note
-			if doc.status == 'Open':
-				doc.status = "Lead"
-	else:
-		doc.custom_latest_note_created_time = frappe.utils.datetime.datetime.now()
-		doc.custom_latest_note = ''
+		for note in doc.notes:
+			if note.is_new() and note.note and '有新的原始线索' not in str(note.note):
+					doc.custom_latest_note_created_time = note.added_on
+					doc.custom_latest_note = note.note
+					if doc.status == 'Open':
+						doc.status = "Lead"
 
 def set_last_lead_owner(doc):
 	"""
