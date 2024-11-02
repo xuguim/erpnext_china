@@ -1,10 +1,11 @@
 <div class="notes-section col-xs-12">
-
-    <h3>销售反馈模板：</h3>
-    <div style="margin-bottom: 10px;">
-        <span>电话是否打通</span><br>
-        <span>微信是否通过</span><br>
-        <span>线索有效/无效情况详细说明</span><br>
+    <div>
+        <div style="font-size: 15px; font-weight: bold;">销售反馈说明：</div>
+        <div style="margin-bottom: 10px;display: flex; flex-direction: column;">
+            <span>1、电话是否打通。</span>
+            <span>2、微信是否通过。</span>
+            <span>3、线索有效/无效情况详细说明。</span>
+        </div>
     </div>
     {% if (!frappe.last_request.name || frappe.get_doc("Lead", frappe.last_request.name).custom_sea == '私海') { %}
     <div class="new-btn pb-3">
@@ -58,7 +59,6 @@
         {{ __("No Notes") }}
     </div>
     {% } %}
-</div>
 </div>
 
 <style>
