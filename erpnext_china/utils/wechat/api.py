@@ -1,6 +1,4 @@
-import traceback
 import frappe
-import datetime
 import json
 import requests
 import xmltodict
@@ -10,7 +8,7 @@ from werkzeug.wrappers import Response
 from frappe.utils import logger, get_url
 
 from . import WXBizMsgCrypt3
-from erpnext_china.utils import lead_tools, checkin_tools
+from erpnext_china.utils import lead_tools
 
 
 logger.set_log_level("DEBUG")
@@ -286,133 +284,6 @@ def qv_create_crm_lead(message=None, original_lead=None):
 		logger.error(e)
 
 
-def update_tags(access_token):
-
-	tags = get_tags(access_token)
-	full_tags = {}
-	for tag in tags:
-		tag_id = tag.get('tagid')
-		full_tags[str(tag_id)] = {
-			"tag_name": tag.get('tagname'),
-			"userid_list": get_tag_staff(tag_id, access_token)
-		}
-	qv_tags = set(full_tags.keys())
-	checkin_tools.update_tags(full_tags, qv_tags)
-
-def update_groups(access_token):
-	# 更新考勤规则
-	groups = get_checkin_group(access_token)
-	# 这是企微中通过API创建的规则
-	api_groups = [group for group in groups if not group.get('create_userid', None)]
-	# 这是企微中手动创建的规则
-	origin_groups = [group for group in groups if group.get('create_userid', None)]
-	checkin_tools.update_api_groups(api_groups)
-	checkin_tools.update_local_groups(origin_groups)
-
-@frappe.whitelist(allow_guest=True)
-def wecom_to_ebc():
-	try:
-		setting = frappe.get_cached_doc("WeCom Setting")
-		access_token = setting.access_token
-		update_tags(access_token)
-		update_groups(access_token)
-		frappe.db.commit()
-	except Exception as e:
-		logger.error(traceback.format_exc())
-		frappe.db.rollback()
-
-@frappe.whitelist(allow_guest=True)
-def group_write_into_wecom(**kwargs):
-	effective_now = kwargs.get('effective_now', '0')
-	if effective_now == '0':
-		effective_now = False
-	else:
-		effective_now = True
-	group_id = kwargs.get('group_id')
-	setting = frappe.get_cached_doc("WeCom Setting")
-	access_token = setting.access_token
-
-	group_doc = frappe.get_cached_doc("Checkin Group", group_id)
-	# 找到当前规则下的考勤标签
-	staff = set()
-	for t in group_doc.tags:
-		tag = frappe.get_cached_doc("Checkin Tag", t.tag)
-		staff = staff.union(set(json.loads(tag.raw)))
-	# 去除无效的字段
-	group_data = clean_checkin_group_params(json.loads(group_doc.raw))
-	group_data['range']['userid'] = list(staff)
-	
-	# 如果已经是创建过的考勤，则更新
-	if group_doc.api_group:
-		# 这里要使用手动规则对应的API规则的ID
-		group_data['groupid'] = group_doc.api_group
-		update_checkin_group(access_token, group_data, effective_now)
-	else:
-		group_data.pop('groupid')
-		create_checkin_group(access_token, group_data, effective_now)
-	frappe.enqueue('erpnext_china.utils.wechat.api.wecom_to_ebc', job_id=group_id, deduplicate=True)
-	frappe.db.commit()
-
-
-@frappe.whitelist(allow_guest=True)
-def delete_group(**kwargs):
-	group_id = kwargs.get('group_id')
-	if not group_id:
-		frappe.throw("必须选择一个规则")
-	setting = frappe.get_cached_doc("WeCom Setting")
-	access_token = setting.access_token
-	# 删除企微API创建的规则
-	group = frappe.get_cached_doc("Checkin Group", group_id)
-	if group.api_group:
-		delete_checkin_group(access_token, group.api_group)
-		checkin_tools.delete_checkin_group(group_id)
-	frappe.enqueue('erpnext_china.utils.wechat.api.wecom_to_ebc', job_id=group_id, deduplicate=True)
-	frappe.db.commit()
-
-
-def group_write_to_wecom_by_tag(tag_id):
-	"""将关联到此标签的规则更新userid到企微"""
-	local_group_id = frappe.db.get_value("Checkin Group Tag", filters={
-		"parentfield": "tags",
-		"parenttype": "Checkin Group",
-		"tag": tag_id
-	}, fieldname='parent')
-
-	# 如果标签没有和规则关联就退出
-	if not local_group_id:
-		return
-	
-	tag = frappe.get_doc("Checkin Tag", tag_id)
-	users = json.loads(tag.raw)
-
-	setting = frappe.get_cached_doc("WeCom Setting")
-	access_token = setting.access_token
-
-	# 找到对应的API group
-	local_group = frappe.get_cached_doc("Checkin Group", local_group_id)
-	if not local_group.api_group:
-		return
-	group = {
-		"groupid": int(local_group.api_group),
-		"range": {
-			"userid": users
-		}
-	}
-	update_checkin_group(access_token, group, effective_now=True)
-
-
-def checkin_enqueue_task(tag_id):
-	"""
-	标签员工变化事件发生时，进更新企微规则对应的员工
-	"""
-	# 更新标签和规则：将标签对应的员工同步过来
-	wecom_to_ebc()
-	# # 将标签对应的规则更新对应的员工
-	# group_write_to_wecom_by_tag(tag_id)
-	# # 将更新后的API规则同步下来
-	# wecom_to_ebc()
-
-
 @frappe.whitelist(allow_guest=True)
 def wechat_msg_callback(**kwargs):
 	url = get_url() + frappe.request.full_path
@@ -437,18 +308,9 @@ def wechat_msg_callback(**kwargs):
 		dict_content = xmltodict.parse(xml_content)
 		dict_data = dict_content.get('xml')
 		change_type = dict_data.get('ChangeType')
-		
-		# 当标签发生变化时，更新系统的考勤标签、考勤规则
-		if change_type == 'update_tag':
-			tag_id = dict_data.get('TagId')
-			tag_doc = frappe.get_cached_doc("Checkin Tag", tag_id)
-			if str(tag_doc.tag_name).startswith('考勤'):
-				# checkin_enqueue_task(tag_id=tag_doc.tag_id)
-				frappe.enqueue('erpnext_china.utils.wechat.api.checkin_enqueue_task', tag_id=tag_doc.tag_id, job_id=raw_signature, deduplicate=True)
-			return
 
 		# 如果是获客助手新增客户
-		elif change_type == 'add_external_contact':
+		if change_type == 'add_external_contact':
 			external_user_id = dict_data.get('ExternalUserID')
 			state = dict_data.get('State')
 			msg = frappe.db.exists('WeCom Message', {"external_user_id": external_user_id})
