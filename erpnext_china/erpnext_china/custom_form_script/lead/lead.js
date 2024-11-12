@@ -47,7 +47,7 @@ frappe.ui.form.on('Lead', {
                 frm.set_intro();
                 frm.set_intro(__("请在右上角【行动】或【...】中点击【认领线索】查看联系方式。"));
             }
-            
+
             // 如果不是管理员，则隐藏 notes子表
             if (!frappe.user.has_role('System Manager')) {
                 frm.set_df_property("notes", "hidden", "1")
@@ -71,7 +71,7 @@ frappe.ui.form.on('Lead', {
                         primary_action(values) {
                             let content = values['content'];
                             content = content.trim()
-                            if(content.length < 3){
+                            if (content.length < 3) {
                                 frappe.throw("内容必须大于3个字！")
                             }
                             const firstChar = content[0];
@@ -85,7 +85,7 @@ frappe.ui.form.on('Lead', {
                             if (isDieci) {
                                 frappe.throw("内容格式错误！")
                             }
-                            frappe.call("erpnext_china.erpnext_china.custom_form_script.lead.lead.give_up_lead", { 
+                            frappe.call("erpnext_china.erpnext_china.custom_form_script.lead.lead.give_up_lead", {
                                 lead: frm.doc.name,
                                 content: "放弃原因：" + content
                             }).then((r) => {
@@ -113,6 +113,26 @@ frappe.ui.form.on('Lead', {
                     }, __("Action"));
                 }
             }
+            
+            // 展示是否已经查看过
+            if (frm.meta.track_views && frm.doc.lead_owner) {
+                frappe.call("erpnext_china.erpnext_china.custom_form_script.lead.lead.get_viewed_on",
+                    {
+                        lead: frm.doc.name,
+                        lead_owner: frm.doc.lead_owner
+                    }).then((r) => {
+                        if (r.message && r.message.viewed_on) {
+                            const viewedOn = r.message.viewed_on;
+                            const viewedDom = $(`<li style="margin-bottom: var(--margin-md);">
+                        <span>${frm.doc.custom_lead_owner_name} 已经查看</span>
+                        <span class="frappe-timestamp " data-timestamp="${viewedOn}" title="${viewedOn}">${comment_when(viewedOn)}</span>
+                        </li>`)
+                            viewedDom.insertBefore(frm.page.sidebar.find('.modified-by'));
+                        }
+                    })
+            }
+
         }
-    }
+    },
+
 })

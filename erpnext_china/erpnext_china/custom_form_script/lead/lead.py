@@ -280,3 +280,13 @@ def get_employee_lead_total(**kwargs):
 		"route_options": {},
 		"route": []
 	}
+
+@frappe.whitelist()
+def get_viewed_on(**kwargs):
+	try:
+		lead = kwargs.get('lead')
+		lead_owner = kwargs.get('lead_owner')
+		doc = frappe.get_last_doc("View Log", filters={"reference_name": lead, "viewed_by": lead_owner}, order_by="creation asc")
+		return {"viewed_on": doc.creation}
+	except:
+		return
