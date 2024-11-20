@@ -354,7 +354,8 @@
   {
    "fieldname": "ad_uc_name",
    "fieldtype": "Data",
-   "label": "Ad Uc Name"
+   "label": "Ad Uc Name",
+   "permlevel": 1
   },
   {
    "fieldname": "area_province",
@@ -502,7 +503,8 @@
   {
    "fieldname": "adv_name",
    "fieldtype": "Data",
-   "label": "ADV Name"
+   "label": "ADV Name",
+   "permlevel": 1
   },
   {
    "fieldname": "clue_source",
@@ -725,7 +727,8 @@
    "fieldname": "employee_douyin_account",
    "fieldtype": "Link",
    "label": "Employee Douyin Account",
-   "options": "Lead Domain for Douyin"
+   "options": "Lead Domain for Douyin",
+   "permlevel": 9
   },
   {
    "fieldname": "user",
@@ -740,6 +743,7 @@
    "fieldtype": "Data",
    "is_virtual": 1,
    "label": "Username",
+   "permlevel": 1,
    "read_only": 1
   },
   {
@@ -760,7 +764,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-04 10:59:39.309973",
+ "modified": "2024-11-19 15:33:12.576620",
  "modified_by": "Administrator",
  "module": "ERPNext China",
  "name": "Original Leads",
