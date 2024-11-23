@@ -11,6 +11,12 @@ frappe.ui.form.on('Sales Order', {
 		};
 	},
     refresh(frm){
+        frm.call('get_p13').then((r)=>{
+            const name = r.message.name;
+            if (name) {
+                frm.doc.taxes_and_charges = name
+            }
+        });
         // 设置子表字段的筛选条件
         frm.set_query("item_code", "items", function(doc) {
             return {
