@@ -18,8 +18,8 @@ frappe.ui.form.on('Sales Order', {
                     ["Item", "disabled", "=", 0], // 只显示启用的项目
                     ["Item", "has_variants", "=", 0], // 不显示变体项目
                     ["Item", "is_sales_item", "=", 1], // 只显示销售项目
-                    ["Item", "item_group", "descendants of (inclusive)", "成品"], // 只显示成品组的项目
-                    ["Item", "company", "in", [doc.company]] // 匹配主表的公司字段
+                    ["Item", "item_group", "descendants of (inclusive)", "成品"] // 只显示成品组的项目
+                    // ["Item", "company", "in", [doc.company]] // 匹配主表的公司字段
                 ]
             };
         });
