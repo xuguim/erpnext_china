@@ -11,7 +11,7 @@ class CustomBatch(Batch):
         def check_manufactruing_date_in_batch_no(self):
             '''验证生产日期不超出批号30天'''
             manufacturing_date = frappe.utils.getdate(self.manufacturing_date)
-            for days in list(range(1,31)):
+            for days in list(range(-31,1)):
                 result = False
                 if frappe.utils.add_to_date(manufacturing_date, days=days).strftime('%y%m%d') in self.name:
                     result = True
