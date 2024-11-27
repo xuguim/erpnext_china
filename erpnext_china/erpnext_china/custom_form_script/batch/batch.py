@@ -7,18 +7,6 @@ class CustomBatch(Batch):
         # 修改名称，保持名称唯一性
         self.name = self.name + '-' + self.item
 
-        # 根据物料有效期，补全到期日期
-        item = frappe.get_doc('Item', self.item)
-        if int(item.shelf_life_in_days) > 0:
-            self.expiry_date = frappe.utils.add_to_date(self.manufacturing_date, days=item.shelf_life_in_days, as_string=True)
-        else:
-            frappe.msgprint(
-                msg='物料未填写保质期，请完善物料保质期',
-                title='警告',
-                raise_exception=FileNotFoundError
-            )
-
-
         # 根据生产日期验证批号是否正确
         def check_manufactruing_date_in_batch_no(self):
             '''验证生产日期不超出批号30天'''
@@ -38,7 +26,7 @@ class CustomBatch(Batch):
                 if self.name.find(year) != -1:
                     if self.name.find(year) < year_pos:
                         year_pos = self.name.find(year)
-            manufactruing_date = frappe.utils.getdate(datetime.datetime.strptime(self.name[year_pos:year_pos+6],'%y%m%d'))
+            self.manufacturing_date = datetime.datetime.strptime(self.name[year_pos:year_pos+6],'%y%m%d')
         else:
             if not check_manufactruing_date_in_batch_no(self):
                 if not frappe.db.get_value('Has Role',{'parent':self.modified_by,'role':'仓库管理11'}):
@@ -47,3 +35,14 @@ class CustomBatch(Batch):
                         title='警告',
                         raise_exception=FileNotFoundError
                         )
+
+        # 根据物料有效期，补全到期日期
+        item = frappe.get_doc('Item', self.item)
+        if int(item.shelf_life_in_days) > 0:
+            self.expiry_date = frappe.utils.add_to_date(self.manufacturing_date, days=item.shelf_life_in_days, as_string=True)
+        else:
+            frappe.msgprint(
+                msg='物料未填写保质期，请完善物料保质期',
+                title='警告',
+                raise_exception=FileNotFoundError
+            )
