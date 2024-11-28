@@ -43,7 +43,7 @@ frappe.ui.form.on("Sales Order Item", {
 		} else {
 			frm.script_manager.copy_from_first_row("items", row, ["delivery_date"]);
 		}
-        frappe.call("erpnext_china_mdm.mdm.custom_form_script.item.get_item_default_warehouse", {item_code: row.item_code, company: frm.doc.company}).then((r)=>{
+        frappe.call("erpnext_china_mdm.mdm.custom_form_script.item.item.get_item_default_warehouse", {item_code: row.item_code, company: frm.doc.company}).then((r)=>{
             if(r.message) {
                 row.warehouse = r.message;
                 refresh_field("warehouse", cdn, "items");

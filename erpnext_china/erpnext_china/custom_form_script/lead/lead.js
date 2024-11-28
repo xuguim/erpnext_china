@@ -132,6 +132,16 @@ frappe.ui.form.on('Lead', {
                     })
             }
 
+        } else {
+            // 如果是销售，则隐藏源并且设置为非必填
+            frappe.db.get_value('User', filters={'name': frappe.user.name, 'role_profile_name': '销售'}, fieldname='name').then(r=>{
+                if (r.message.name) {
+                    frm.fields_dict['source'].df.reqd = 0;
+                    frm.set_df_property("source", "hidden", "1");
+                    frm.refresh_field("source");
+                    frm.set_df_property("custom_lead_owner_employee", "hidden", "1");
+                }
+            })
         }
     },
 
