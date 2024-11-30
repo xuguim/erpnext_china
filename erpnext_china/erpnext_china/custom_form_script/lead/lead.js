@@ -132,17 +132,20 @@ frappe.ui.form.on('Lead', {
                     })
             }
 
-        } else {
-            // 如果是销售，则隐藏源并且设置为非必填
-            frappe.db.get_value('User', filters={'name': frappe.user.name, 'role_profile_name': '销售'}, fieldname='name').then(r=>{
-                if (r.message.name) {
-                    frm.fields_dict['source'].df.reqd = 0;
-                    frm.set_df_property("source", "hidden", "1");
-                    frm.refresh_field("source");
-                    frm.set_df_property("custom_lead_owner_employee", "hidden", "1");
-                }
-            })
         }
+
+        frappe.db.get_value('User', filters={'name': frappe.user.name, 'role_profile_name': '网推'}, fieldname='name').then(r=>{
+            console.log(r)
+            if (r.message.name) {
+                frm.set_df_property("source", "reqd", "1");
+                frm.refresh_field("source");
+            }
+            if((!r.message.name || !frm.doc.custom_auto_allocation) && frm.is_new()) {
+                frm.doc.source = '其它'
+                frm.doc.custom_other_source = '业务自录入'
+                frm.refresh_field("source");
+            }
+        })
     },
 
 })
