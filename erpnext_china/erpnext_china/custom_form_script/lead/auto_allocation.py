@@ -83,7 +83,7 @@ def get_items_from_rules():
 		# 判断当前时间是否在此规则允许的时间表范围内
 		time_rules = rule.time_rules
 		if verify_time_rules(time_rules=time_rules):
-			items.extend([e for e in rule.employee if e.activate])
+			items.extend([e for e in rule.employee if e.activate and frappe.utils.time_diff_in_seconds(frappe.utils.now_datetime(), e.zero_datetime)>0])
 	return items
 
 def get_items_from_filters(product_category, source, items):

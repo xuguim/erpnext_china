@@ -133,6 +133,19 @@ frappe.ui.form.on('Lead', {
             }
 
         }
+
+        frappe.db.get_value('User', filters={'name': frappe.user.name, 'role_profile_name': '网推'}, fieldname='name').then(r=>{
+            console.log(r)
+            if (r.message.name) {
+                frm.set_df_property("source", "reqd", "1");
+                frm.refresh_field("source");
+            }
+            if((!r.message.name || !frm.doc.custom_auto_allocation) && frm.is_new()) {
+                frm.doc.source = '其它'
+                frm.doc.custom_other_source = '业务自录入'
+                frm.refresh_field("source");
+            }
+        })
     },
 
 })

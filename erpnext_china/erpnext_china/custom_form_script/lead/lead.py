@@ -148,7 +148,20 @@ class CustomLead(Lead):
 			except:
 				pass
 	
+	def check_lead_source(self):
+		user = frappe.get_doc('User', self.owner)
+		if self.is_new() and user.role_profile_name == '销售':
+			source = frappe.db.get_value('Lead Source', filters={'name': '销售录入'})
+			if not source:
+				doc = frappe.new_doc('Lead Source')
+				doc.source_name = '销售录入'
+				doc.custom_sorted_index = 999
+				doc.insert(ignore_permissions=True)
+			self.source = '销售录入'
+
 	def before_save(self):
+
+		self.check_lead_source()
 		self.set_note_difference()
 		
 		if not self.custom_original_lead_name:
