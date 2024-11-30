@@ -136,7 +136,7 @@
     "property": "depends_on",
     "property_type": "Data",
     "row_name": null,
-    "value": ""
+    "value": "eval:doc.custom_batchno_with_manufacturing_date==0"
    },
    {
     "_assign": null,
