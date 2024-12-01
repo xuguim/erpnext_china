@@ -25,6 +25,7 @@ class CustomEmployee(Employee):
 		self.set_date_of_birth()
 		self.set_city_of_birth()
 		self.set_degree()
+		self.set_two_social_insurance()
 
 		if self.user_id:
 			self.validate_user_details()
@@ -74,6 +75,12 @@ class CustomEmployee(Employee):
 				china_city_code_json = file.read()
 			china_city_code_dict = json.loads(china_city_code_json)
 			self.custom_city_of_birth = china_city_code_dict[id_card[:6]]
+
+	def set_two_social_insurance(self):
+		if not self.custom_two_social_insurance:
+			self.custom_two_social_insurance_pay_type = None
+			self.custom_two_social_insurance_base_rate = 0
+			
 
 
 @frappe.whitelist()
