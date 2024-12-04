@@ -57,7 +57,8 @@ doctype_js = {
     'Quotation':'erpnext_china/custom_form_script/quotation/quotation.js',
     'Sales Order':'erpnext_china/custom_form_script/sales_order/sales_order.js',
     'Stock Entry':'erpnext_china/custom_form_script/stock_entry/stock_entry.js',
-    'Lead': 'erpnext_china/custom_form_script/lead/lead.js'
+    'Lead': 'erpnext_china/custom_form_script/lead/lead.js',
+	'Customer': 'erpnext_china/custom_form_script/customer/customer.js',
 }
 
 doctype_list_js = {
@@ -79,3 +80,16 @@ has_permission = {
 #         "before_save": "erpnext_china.erpnext_china.doctype.auto_allocation_rule.auto_allocation_rule.lead_before_save_handle"
 #     }
 # }
+doc_events = {
+	"Sales Order": {
+		"on_submit": "erpnext_china.erpnext_china.custom_form_script.sales_order.sales_order.make_internal_purchase_order",
+	},
+	"Purchase Order":{
+		"on_submit": "erpnext_china.erpnext_china.custom_form_script.purchase_order.purchase_order.make_internal_sales_order",
+	}
+}
+
+fixtures = [
+    {"dt": "Custom Field", "filters": [["module", "=", "ERPNext China"]]},
+    {"dt": "Property Setter", "filters": [["module", "=", "ERPNext China"]]},
+]
