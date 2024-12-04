@@ -43,21 +43,52 @@ class CustomSalesOrder(SalesOrder):
                     item.supplier = internal_supplier[0].name
                 else:
                     frappe.throw("行 #{0} 的物料没有公司{1}的默认值配置，请添加配置或检查是否用错了下单公司".format(item.idx, self.company))
-        self.clear_drop_ship()
+        
+        # 此时is_internal_customer字段可能还没被赋值
+        internal_customer = frappe.db.exists("Customer", {"name":self.customer,"is_internal_customer": 1, "disabled": 0})
+        if internal_customer:
+            self.clear_drop_ship()
+            self.get_final_customer()
 
     def clear_drop_ship(self):
-        internal_customer = frappe.db.exists("Customer", {"name":self.customer,"is_internal_customer": 1, "disabled": 0})
         for d in self.get("items"):
-            if internal_customer:
-                d.delivered_by_supplier = 0
-                d.supplier = None
+            d.delivered_by_supplier = 0
+            d.supplier = None
+
+    def get_final_customer(self):
+        reference_po = list(set([d.purchase_order for d in self.items]))
+        if len(reference_po) > 0 and reference_po[0]:
+            po_name = reference_po[0]
+            query = f"""
+                select
+                    so.customer
+                from
+                    (select
+                        distinct poi.sales_order
+                    from
+                        `tabPurchase Order` po, `tabPurchase Order Item` poi
+                    where
+                        po.name = poi.parent
+                        and po.name = '{po_name}') po_so
+                left join
+                    `tabSales Order` so on so.name = po_so.sales_order
+            """
+
+            res = frappe.db.sql(query,as_dict=1)
+            if len(res) > 0:
+                self.final_customer = res[0].customer
+
+            
+
 
 def make_internal_purchase_order(doc,method=None):
-    if frappe.db.get_single_value("Selling Settings", "custom_allow_generate_inter_company_transactions"):
+    if frappe.db.get_single_value("Selling Settings", "allow_generate_inter_company_transactions"):
         internal_suppliers = frappe.get_all('Supplier', filters={'is_internal_supplier':1,'disabled':0},pluck='name')
         items = [d for d in doc.items if d.delivered_by_supplier and d.supplier in internal_suppliers]
         if not items:
             return
+        current_user = frappe.session.user
+        frappe.set_user("Administrator")
         purchase_orders = make_purchase_order_for_default_supplier(doc.name, items)
         msg = f"""
             <h5>已自动生成{len(purchase_orders)}张采购订单</h5>
@@ -68,3 +99,5 @@ def make_internal_purchase_order(doc,method=None):
                 <a href="/app/purchase-order/{po.name}" target="_blank">{po.name}</a>
             """
         frappe.msgprint(f"""<div>{msg}<div>""",alert=1)
+        frappe.set_user(current_user)
+

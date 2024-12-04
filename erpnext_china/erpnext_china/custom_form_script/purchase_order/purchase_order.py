@@ -2,7 +2,9 @@ import frappe
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_inter_company_transaction
 
 def make_internal_sales_order(doc, method):
-	if frappe.db.get_single_value("Selling Settings", "custom_allow_generate_inter_company_transactions"):
+	if frappe.db.get_single_value("Selling Settings", "allow_generate_inter_company_transactions"):
+		current_user = frappe.session.user
+		frappe.set_user("Administrator")
 		sales_order = make_inter_company_transaction('Purchase Order',doc.name,target_doc=None)
 		sales_order.save().submit()
 		msg = f"""
@@ -13,3 +15,4 @@ def make_internal_sales_order(doc, method):
 		"""
 
 		frappe.msgprint(msg,alert=1)
+		frappe.set_user(current_user)
