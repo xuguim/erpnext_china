@@ -25,6 +25,9 @@ class CustomSalesOrder(SalesOrder):
             if len(company_warehouse) == 0:
                 shipping_company = [d.company for d in default_warehouse_list if d.company != self.company and d.item_code==item.item_code]
                 if len(shipping_company) > 0:
+                    if len(shipping_company) == 1:
+                        shipping_company.append('')
+
                     query = f"""
                         select
                             sup.name
@@ -35,6 +38,7 @@ class CustomSalesOrder(SalesOrder):
                             and sup.is_internal_supplier = 1
                             and al.parenttype = 'Supplier'
                             and al.company = '{self.company}'
+                            and sup.name in {tuple(shipping_company)}
                     """
                     internal_supplier = frappe.db.sql(query,as_dict=1)
                     if not internal_supplier:
