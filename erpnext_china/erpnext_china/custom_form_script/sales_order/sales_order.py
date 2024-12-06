@@ -98,6 +98,7 @@ def make_internal_purchase_order(doc,method=None):
             <h5>已自动生成{len(purchase_orders)}张采购订单</h5>
         """
         for po in purchase_orders:
+            validate_po_item_price(po,doc)
             po.save()
             po.db_set('owner',doc.owner)
             po.submit()
@@ -107,3 +108,13 @@ def make_internal_purchase_order(doc,method=None):
         frappe.msgprint(f"""<div>{msg}<div>""",alert=1)
         frappe.set_user(current_user)
 
+def validate_po_item_price(po,so):
+    if frappe.get_all('Price List',filters={'buying':1,'selling':1,'currency':so.currency}):
+        for d in po.items:
+            if d.rate == 0:
+                so_rate = [soi.rate for soi in so.items if soi.item_code == d.item_code][0]
+                d.rate = so_rate
+                frappe.log([d.item_code,so_rate])
+        if so.apply_discount_on and so.discount_amount:
+            po.apply_discount_on = so.apply_discount_on
+            po.discount_amount = so.discount_amount
