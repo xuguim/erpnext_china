@@ -38,7 +38,7 @@ class CustomSalesOrder(SalesOrder):
                             and sup.is_internal_supplier = 1
                             and al.parenttype = 'Supplier'
                             and al.company = '{self.company}'
-                            and sup.name in {tuple(shipping_company)}
+                            and sup.represents_company in {tuple(shipping_company)}
                     """
                     internal_supplier = frappe.db.sql(query,as_dict=1)
                     if not internal_supplier:
@@ -98,7 +98,9 @@ def make_internal_purchase_order(doc,method=None):
             <h5>已自动生成{len(purchase_orders)}张采购订单</h5>
         """
         for po in purchase_orders:
-            po.save().submit()
+            po.save()
+            po.db_set('owner',doc.owner)
+            po.submit()
             msg += f"""
                 <a href="/app/purchase-order/{po.name}" target="_blank">{po.name}</a>
             """
