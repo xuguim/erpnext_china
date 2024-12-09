@@ -87,7 +87,7 @@ frappe.ui.form.on('Lead', {
                             }
                             frappe.call("erpnext_china.erpnext_china.custom_form_script.lead.lead.give_up_lead", {
                                 lead: frm.doc.name,
-                                content: "放弃原因：" + content
+                                content: "放弃到集团公海原因：" + content
                             }).then((r) => {
                                 if (r && r.message == 200) {
                                     window.location.reload();

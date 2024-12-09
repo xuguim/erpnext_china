@@ -20,7 +20,9 @@
     {% } %}
     <div class="all-notes">
         {% if (notes.length) { %}
-        {% for(var i=0, l=notes.length; i<l; i++) { %} <div class="comment-content p-3 row" name="{{ notes[i].name }}">
+        {% for(var i=0, l=notes.length; i<l; i++) { %} 
+        {% if (['销售反馈', '客服反馈', '网推反馈'].includes(notes[i].custom_note_type)) { %}
+        <div class="comment-content p-3 row" name="{{ notes[i].name }}">
             <div class="mb-2 head col-xs-3">
                 {% if (notes[i].added_by && notes[i].added_on) %}
                 <div class="row">
@@ -52,13 +54,17 @@
                             </span>
                         {% } %} -->
             </div>
+    
+        </div>
+        {% } %}
+    
+        {% } %}
+        {% } else { %}
+        <div class="no-activity text-muted pt-6">
+            {{ __("No Notes") }}
+        </div>
+        {% } %}
     </div>
-    {% } %}
-    {% } else { %}
-    <div class="no-activity text-muted pt-6">
-        {{ __("No Notes") }}
-    </div>
-    {% } %}
 </div>
 
 <style>

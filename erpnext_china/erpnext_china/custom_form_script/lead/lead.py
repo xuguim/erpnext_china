@@ -1,14 +1,11 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-import math
-import re
 import frappe
-
-from erpnext_china.utils.lead_tools import get_doc_or_none, remove_whitespace, add_log,get_single_contact_info
+from erpnext_china.utils import lead_tools
 from erpnext_china.utils.old_system_data import white_list, old_system_contacts
 from erpnext.crm.doctype.lead.lead import Lead
 import frappe.utils
-from erpnext_china.erpnext_china.custom_form_script.lead.auto_allocation import lead_before_save_handle, check_lead_total_limit, set_last_lead_owner, set_latest_note, to_public, to_private
+from erpnext_china.erpnext_china.custom_form_script.lead import auto_allocation
 
 class CustomLead(Lead):
 	def create_contact(self):
@@ -48,7 +45,7 @@ class CustomLead(Lead):
 		return contact
 
 	def validate_single_phone(self):
-		links = get_single_contact_info(self.phone, self.mobile_no, self.custom_wechat)
+		links = lead_tools.get_single_contact_info(self.phone, self.mobile_no, self.custom_wechat)
 		or_filters = [
 			{'phone': ['in', links]},
 			{'mobile_no': ['in', links]},
@@ -63,13 +60,13 @@ class CustomLead(Lead):
 			lead_name = ''
 			if not self.is_new():
 				lead_name = self.name
-			add_log(frappe.session.user, ','.join(links), 'Lead', lead.name, lead_name, self.custom_original_lead_name)
+			lead_tools.add_log(frappe.session.user, ','.join(links), 'Lead', lead.name, lead_name, self.custom_original_lead_name)
 			frappe.throw(frappe.bold(message), title='线索重复')
 
 	def clean_contact_info(self):
-		self.phone = remove_whitespace(self.phone)
-		self.mobile_no = remove_whitespace(self.mobile_no)
-		self.custom_wechat = remove_whitespace(self.custom_wechat)
+		self.phone = lead_tools.remove_whitespace(self.phone)
+		self.mobile_no = lead_tools.remove_whitespace(self.mobile_no)
+		self.custom_wechat = lead_tools.remove_whitespace(self.custom_wechat)
 	
 	def validate_contact_format(self):
 		if not any([self.phone, self.mobile_no, self.custom_wechat]):
@@ -88,7 +85,7 @@ class CustomLead(Lead):
 	@property
 	def custom_lead_owner_name(self):
 		if self.lead_owner:
-			lead_owner = get_doc_or_none('User', {
+			lead_owner = lead_tools.get_doc_or_none('User', {
 				'name': self.lead_owner
 			})
 			if lead_owner:
@@ -96,7 +93,7 @@ class CustomLead(Lead):
 	
 	def get_original_lead(self):
 		if self.custom_original_lead_name:
-			return get_doc_or_none("Original Leads", {"name": self.custom_original_lead_name})
+			return lead_tools.get_doc_or_none("Original Leads", {"name": self.custom_original_lead_name})
 		return None
 	
 	# @property
@@ -120,7 +117,7 @@ class CustomLead(Lead):
 	@property
 	def custom_lead_owner_leader_name(self):
 		if self.lead_owner:
-			employee = get_doc_or_none("Employee", {"user_id": self.lead_owner})
+			employee = lead_tools.get_doc_or_none("Employee", {"user_id": self.lead_owner})
 			if employee:
 				employee_leader_name = employee.reports_to
 				if employee_leader_name:
@@ -135,7 +132,8 @@ class CustomLead(Lead):
 	# 提供给UI Python脚本调用，注意这里会在before_save之前调用
 	def before_save_script(self):
 		self._custom_comment = '手动分配'
-		lead_before_save_handle(self)
+		self._rule_name = ''
+		auto_allocation.lead_before_save_handle(self)
 
 	def set_note_difference(self):
 		if not self.is_new() and self.has_value_changed("notes"):
@@ -148,6 +146,19 @@ class CustomLead(Lead):
 			except:
 				pass
 	
+	def set_note_type(self):
+		for note in self.notes:
+			if note.is_new() and not note.custom_note_type:
+				user = frappe.get_doc('User', note.added_by)
+				if note.added_by in ['jintingyan@zhushigroup.cn', 'wangjiali@zhushigroup.cn']:
+					note.custom_note_type = '客服反馈'
+				elif user.role_profile_name == '销售':
+					note.custom_note_type = '销售反馈'
+				elif user.role_profile_name == '网推':
+					note.custom_note_type = '网推反馈'
+				else:
+					note.custom_note_type = '其它'
+
 	def check_lead_source(self):
 		user = frappe.get_doc('User', self.owner)
 		if self.is_new() and user.role_profile_name == '销售':
@@ -161,7 +172,7 @@ class CustomLead(Lead):
 
 	def before_save(self):
 
-		self.check_lead_source()
+		# self.check_lead_source()
 		self.set_note_difference()
 		
 		if not self.custom_original_lead_name:
@@ -169,24 +180,27 @@ class CustomLead(Lead):
 			self.custom_employee_douyin_account = ''
 
 		if self.has_value_changed("lead_owner"):
-			set_last_lead_owner(self)
+			lead_tools.set_last_lead_owner(self)
 
 		if self.has_value_changed("notes"):
-			set_latest_note(self)
+			self.set_note_type()
+			lead_tools.set_latest_note(self)
 
 		if self.is_new():
 			if not self.custom_original_lead_name:
-				self._custom_comment = f'初始手动录入，{self._custom_comment}给：{self.lead_owner}'
+				self._custom_comment = f'初始手动录入，{self._custom_comment}给：{self.lead_owner}，规则：{self._rule_name}'
 			else:
-				self._custom_comment = f'初始自动录入，自动分配给：{self.lead_owner}'
+				self._custom_comment = f'初始自动录入，{self._custom_comment}给：{self.lead_owner}，规则：{self._rule_name}'
 		else:
 			if self.has_value_changed("lead_owner"):
-				self._custom_comment = f"{self._custom_comment}给: {self.lead_owner}"
-				self.lead_add_comment(self._custom_comment)
-		
+				text = f"{self._custom_comment}给：{self.lead_owner}，规则：{self._rule_name}"
+				self.lead_add_comment(text)
+				lead_tools.insert_crm_note(self, text, '分配日志')
+
 	def after_insert(self):
+		super().after_insert()
 		self.lead_add_comment(self._custom_comment)
-		return super().after_insert()
+		lead_tools.insert_crm_note(self, self._custom_comment, '分配日志', True)
 
 	def lead_add_comment(self, text: str):
 		try:
@@ -202,8 +216,8 @@ class CustomLead(Lead):
 			else:
 				if (self.phone in old_system_contacts) or (self.mobile_no in old_system_contacts) or (self.custom_wechat in old_system_contacts):
 					
-					contact_info = ','.join(get_single_contact_info(self.phone, self.mobile_no, self.custom_wechat))
-					add_log(user, contact_info, 'Old System', 'Old System', original_lead=self.custom_original_lead_name)
+					contact_info = ','.join(lead_tools.get_single_contact_info(self.phone, self.mobile_no, self.custom_wechat))
+					lead_tools.add_log(user, contact_info, 'Old System', 'Old System', original_lead=self.custom_original_lead_name)
 					
 					frappe.throw("当前系统中已经存在此联系方式！")
 			return True
@@ -216,7 +230,7 @@ class CustomLead(Lead):
 				frappe.throw("当前联系方式已经存在客户中！")
 
 	def has_customer_contact(self):
-		links = get_single_contact_info(self.phone, self.mobile_no, self.custom_wechat)
+		links = lead_tools.get_single_contact_info(self.phone, self.mobile_no, self.custom_wechat)
 		records = frappe.get_all("Customer Contact Item", filters=[
 			{'contact_info': ['in', links]},
 			{'lead': ['!=', self.name]}
@@ -227,7 +241,7 @@ class CustomLead(Lead):
 			lead_name = ''
 			if not self.is_new():
 				lead_name = self.name
-			add_log(frappe.session.user, ','.join(links), 'Customer Contact Item', record.name, lead_name, self.custom_original_lead_name)
+			lead_tools.add_log(frappe.session.user, ','.join(links), 'Customer Contact Item', record.name, lead_name, self.custom_original_lead_name)
 			
 			return True
 		return False
@@ -244,10 +258,10 @@ def get_lead(**kwargs):
 		lead = frappe.get_doc('Lead', lead_name)
 		if not lead.custom_lead_owner_employee or not lead.lead_owner:
 			employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, fieldname="name")
-			if check_lead_total_limit(employee):
+			if auto_allocation.check_lead_total_limit(employee):
 				lead.custom_lead_owner_employee = employee
 				lead.lead_owner = frappe.session.user
-				to_private(lead)
+				auto_allocation.to_private(lead)
 				lead.save(ignore_permissions=True)
 				return 200
 			else:
@@ -262,11 +276,12 @@ def give_up_lead(**kwargs):
 	content = kwargs.get('content')
 	if lead_name:
 		lead = frappe.get_doc('Lead', lead_name)
-		to_public(lead)
+		auto_allocation.to_public(lead)
 
 		if content:
 			lead.append("notes", {
 				"note": content,
+				"custom_note_type": "销售反馈",
 				"added_by": frappe.session.user,
 				"added_on": frappe.utils.get_datetime()
 			})

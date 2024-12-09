@@ -16,8 +16,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Lead",
-   "unique": 1
+   "label": "Lead"
   },
   {
    "fieldname": "rule",
@@ -43,7 +42,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-21 12:09:27.728185",
+ "modified": "2024-12-09 16:12:12.819422",
  "modified_by": "Administrator",
  "module": "ERPNext China",
  "name": "Auto Allocation Log",
