@@ -30,23 +30,6 @@ def lead_before_save_handle(doc):
 
 def auto_allocate(doc):
 	"""自动分配
-	找到已启用的规则下的员工 A = []
-
-		如果没有任何启用，则分配给线索创建人，创建人客保数量满，分配到公海
-	
-	根据A找到符合产品分类和来源的员工 B = []
-
-		如果没有符合条件的员工，则分配给线索创建人，创建人客保数量满，分配到公海
-	
-	根据B找到客保数量未分配满的员工 C = []
-
-		如果没有可分配员工，分配给线索创建人，创建人客保数量满，分配到公海
-	
-	根据C找到本轮次未分配满的员工 D = []
-
-		如果D全部分配满，则重置C中所有已分配数量为0，此时C中所有可以分配
-	
-	取C中最早分配的那个员工进行分配
 	"""
 	items = get_items_from_rules()
 	if len(items) == 0:
@@ -203,32 +186,11 @@ def to_private(doc):
 	if not doc.custom_lead_owner_employee:
 		frappe.throw("未指定线索负责员工，禁止进入私海!")
 	old_doc = doc.get_doc_before_save()
-	if not old_doc:
+	if not old_doc or old_doc.lead_owner != doc.lead_owner:
 		doc.status = "Open"
 	doc.custom_sea = "私海"
 	doc.custom_auto_allocation = False
 
-def set_latest_note(doc):
-	"""
-	设置最近反馈
-	"""
-	if doc.notes and len(doc.notes) > 0:
-		for note in doc.notes:
-			if note.is_new() and note.note and '有新的原始线索' not in str(note.note):
-					doc.custom_latest_note_created_time = note.added_on
-					doc.custom_latest_note = note.note
-					if doc.status == 'Open':
-						doc.status = "Lead"
-
-def set_last_lead_owner(doc):
-	"""
-	设置上一次线索负责人
-	"""
-	old_doc = doc.get_doc_before_save()
-	if old_doc:
-		doc.custom_last_lead_owner = old_doc.lead_owner
-	else:
-		doc.custom_last_lead_owner = ''
 
 def add_auto_allocation_log(lead, rule, dt, user):
 	doc = frappe.new_doc("Auto Allocation Log")
@@ -251,6 +213,7 @@ def lead_to_employee(doc, item):
 	item.save(ignore_permissions=True)
 	to_private(doc)
 	try:
+		doc._rule_name = item.parent
 		add_auto_allocation_log(doc.name, item.parent, item.zero_datetime, doc.lead_owner)
 	except:
 		pass

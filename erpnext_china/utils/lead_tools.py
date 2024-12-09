@@ -121,7 +121,7 @@ def get_or_insert_crm_lead(
 		record = records[0]
 		record = frappe.get_doc("Lead", record.name)
 		# 已经存在相同联系方式的线索，给个评论提示一下
-		insert_crm_note(f"有新的原始线索:【{original_lead_name}】关联到当前线索", record.name)
+		insert_crm_note(record, f"有新的原始线索:【{original_lead_name}】关联到当前线索", "网推反馈", True)
 	else:
 		territory = get_system_territory(city or state or country)
 		# 构造新记录的数据
@@ -169,18 +169,16 @@ def get_system_territory(territory: str):
 			return territory
 	return None
 
-def insert_crm_note(note: str, parent: str):
+def insert_crm_note(doc: Document, note: str, note_type: str, update: bool=False):
 	try:
-		note_data = {
-			'doctype': 'CRM Note',
+		doc.append("notes", {
 			'note': note,
+			'custom_note_type': note_type,
 			'added_by': frappe.session.user,
-			'added_on': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-			'parent': parent,
-			'parentfield': 'notes',
-			'parenttype': 'Lead'
-		}
-		frappe.get_doc(note_data).insert(ignore_permissions=True)
+			'added_on': datetime.datetime.now().strftime(r"%Y-%m-%d %H:%M:%S")
+		})
+		if update:
+			doc.save(ignore_permissions=True)
 	except:
 		pass
 
@@ -329,3 +327,23 @@ def search_wecom_message(bd_vid):
 		message = frappe.get_doc("WeCom Message", message_name)
 	return message
 
+def set_latest_note(doc):
+	"""
+	设置最近反馈
+	"""
+	for note in doc.notes:
+		if note.is_new() and note.note and note.custom_note_type in ['销售反馈']:
+			doc.custom_latest_note_created_time = note.added_on
+			doc.custom_latest_note = note.note
+			if doc.status == 'Open':
+				doc.status = "Lead"
+
+def set_last_lead_owner(doc):
+	"""
+	设置上一次线索负责人
+	"""
+	old_doc = doc.get_doc_before_save()
+	if old_doc:
+		doc.custom_last_lead_owner = old_doc.lead_owner
+	else:
+		doc.custom_last_lead_owner = ''
