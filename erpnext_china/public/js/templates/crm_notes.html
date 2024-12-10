@@ -7,7 +7,7 @@
             <span>3、线索有效/无效情况详细说明。</span>
         </div>
     </div>
-    {% if (!frappe.last_request.name || frappe.get_doc("Lead", frappe.last_request.name).custom_sea == '私海') { %}
+    {% if (!frappe.pages.Lead.frm.docname || frappe.pages.Lead.frm.doc.custom_sea == '私海') { %}
     <div class="new-btn pb-3">
         <button class="btn btn-sm small new-note-btn mr-1">
             <svg class="icon icon-sm">
