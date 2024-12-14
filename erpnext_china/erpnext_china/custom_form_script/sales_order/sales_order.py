@@ -85,9 +85,6 @@ class CustomSalesOrder(SalesOrder):
     
 @frappe.whitelist()
 def select_payment_entry(**kwargs):
-    user = frappe.session.user
-    if not frappe.db.get_value('Has Role',{'parent':user,'role':['in',['System Manager','销售会计']]}):
-        frappe.throw('无权限访问')
     kwargs.pop('cmd')
     fields = ['name'] + list(kwargs.keys())
     custom_payment_note = kwargs.pop('custom_payment_note')
@@ -97,7 +94,7 @@ def select_payment_entry(**kwargs):
         filters['custom_payment_note'] = ['like', f'%{custom_payment_note}%']
     if reference_no:
         filters['reference_no'] = ['like', f'%{reference_no}%']
-    results = frappe.get_all("Payment Entry", filters=filters, fields=fields)
+    results = frappe.get_list("Payment Entry", filters=filters, fields=fields)
     return results    
 
 def make_internal_purchase_order(doc,method=None):
