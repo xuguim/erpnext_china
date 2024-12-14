@@ -82,8 +82,20 @@ class CustomSalesOrder(SalesOrder):
             if len(res) > 0:
                 self.final_customer = res[0].customer
 
-            
-
+    
+@frappe.whitelist()
+def select_payment_entry(**kwargs):
+    kwargs.pop('cmd')
+    fields = ['name'] + list(kwargs.keys())
+    custom_payment_note = kwargs.pop('custom_payment_note')
+    reference_no = kwargs.pop('reference_no')
+    filters = {k:v for k,v in kwargs.items() if v}
+    if custom_payment_note:
+        filters['custom_payment_note'] = ['like', f'%{custom_payment_note}%']
+    if reference_no:
+        filters['reference_no'] = ['like', f'%{reference_no}%']
+    results = frappe.get_all("Payment Entry", filters=filters, fields=fields)
+    return results    
 
 def make_internal_purchase_order(doc,method=None):
     if frappe.db.get_single_value("Selling Settings", "allow_generate_inter_company_transactions"):
