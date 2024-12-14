@@ -94,7 +94,7 @@ def select_payment_entry(**kwargs):
         filters['custom_payment_note'] = ['like', f'%{custom_payment_note}%']
     if reference_no:
         filters['reference_no'] = ['like', f'%{reference_no}%']
-    results = frappe.get_all("Payment Entry", filters=filters, fields=fields)
+    results = frappe.get_list("Payment Entry", filters=filters, fields=fields)
     return results    
 
 def make_internal_purchase_order(doc,method=None):

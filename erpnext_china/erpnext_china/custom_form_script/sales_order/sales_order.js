@@ -31,10 +31,12 @@ frappe.ui.form.on('Sales Order', {
         });
 
         // 添加按钮弹出dialog来筛选收付款凭证
+        // if(frappe.user.has_role('销售会计')) {
         frm.add_custom_button(
-            __("查看收付款凭证"),
+            __("Query Payment Entry"),
             () => frm.events.select_payment_entry(frm),
         );
+        // }
     },
     select_payment_entry(frm) {
         const handleFieldOnChange = ()=>{
