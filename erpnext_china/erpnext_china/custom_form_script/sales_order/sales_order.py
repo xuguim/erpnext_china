@@ -87,13 +87,16 @@ class CustomSalesOrder(SalesOrder):
 def select_payment_entry(**kwargs):
     kwargs.pop('cmd')
     fields = ['name'] + list(kwargs.keys())
+    if 'reference_date' not in fields:
+        fields.append('reference_date')
     custom_payment_note = kwargs.pop('custom_payment_note')
     reference_no = kwargs.pop('reference_no')
-    filters = {k:v for k,v in kwargs.items() if v}
+    filters = {k:v for k,v in kwargs.items() if v and k != 'unallocated_amount'}
     if custom_payment_note:
         filters['custom_payment_note'] = ['like', f'%{custom_payment_note}%']
     if reference_no:
         filters['reference_no'] = ['like', f'%{reference_no}%']
+    filters['docstatus'] = 1
     results = frappe.get_list("Payment Entry", filters=filters, fields=fields)
     return results    
 

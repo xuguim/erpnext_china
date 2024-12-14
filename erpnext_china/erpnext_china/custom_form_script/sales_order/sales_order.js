@@ -130,7 +130,7 @@ frappe.ui.form.on('Sales Order', {
 					fieldname: "unallocated_amount",
 					fieldtype: "Data",
 					label: __("未付金额(CNY)"),
-                    default: frm.doc.total,
+                    default: frm.doc.grand_total - frm.doc.advance_paid,
                     onchange: ()=>{
                         handleFieldOnChange()
                     }
