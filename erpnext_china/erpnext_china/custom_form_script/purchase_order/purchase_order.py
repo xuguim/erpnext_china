@@ -8,6 +8,7 @@ def make_internal_sales_order(doc, method):
 		current_user = frappe.session.user
 		frappe.set_user("Administrator")
 		sales_order = make_inter_company_transaction('Purchase Order',doc.name,target_doc=None)
+		validate_delivery_date(sales_order,doc)
 		sales_order.save().submit()
 		sales_order.db_set('owner',doc.owner)
 
@@ -32,3 +33,13 @@ def make_internal_sales_order(doc, method):
 
 		frappe.msgprint(msg,alert=1)
 		frappe.set_user(current_user)
+
+def validate_delivery_date(sales_order,purchase_order):
+	for soi in sales_order.items:
+		if not soi.delivery_date:
+			poi_name = soi.purchase_order_item
+			poi_schedule_date = [poi.schedule_date for poi in purchase_order.items if poi.name == poi_name]
+			if len(poi_schedule_date) > 0:
+				soi.delivery_date = poi_schedule_date[0]
+			else:
+				soi.delivery_date = purchase_order.schedule_date
