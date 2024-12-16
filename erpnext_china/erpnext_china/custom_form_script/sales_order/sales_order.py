@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from erpnext.selling.doctype.sales_order.sales_order import SalesOrder
 from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order_for_default_supplier
+import json
 
 
 class CustomSalesOrder(SalesOrder):
@@ -86,17 +87,25 @@ class CustomSalesOrder(SalesOrder):
 @frappe.whitelist()
 def select_payment_entry(**kwargs):
     kwargs.pop('cmd')
-    fields = ['name'] + list(kwargs.keys())
+    fields = ['name','docstatus'] + list(kwargs.keys())
     if 'reference_date' not in fields:
         fields.append('reference_date')
     custom_payment_note = kwargs.pop('custom_payment_note')
     reference_no = kwargs.pop('reference_no')
-    filters = {k:v for k,v in kwargs.items() if v and k != 'unallocated_amount'}
+    filters = {k:v for k,v in kwargs.items() if v and k not in ('unallocated_amount','include_submitted_doc')}
+    
+    include_submitted_doc = kwargs.pop('include_submitted_doc')
+    frappe.log({'include_submitted_doc':type(include_submitted_doc)})
+    if int(include_submitted_doc) == 1:
+        filters['docstatus'] = ['<',2]
+    else:
+        filters['docstatus'] = ['=',0]
+
     if custom_payment_note:
         filters['custom_payment_note'] = ['like', f'%{custom_payment_note}%']
     if reference_no:
         filters['reference_no'] = ['like', f'%{reference_no}%']
-    filters['docstatus'] = 1
+    frappe.log(filters)
     results = frappe.get_list("Payment Entry", filters=filters, fields=fields)
     return results    
 
@@ -133,3 +142,64 @@ def validate_po_item_price(po,so):
         if so.apply_discount_on and so.discount_amount:
             po.apply_discount_on = so.apply_discount_on
             po.discount_amount = so.discount_amount
+
+@frappe.whitelist()
+def matching_payment_entries(docname,payment_entries):
+    doc = frappe.get_doc('Sales Order',docname)
+    if isinstance(payment_entries,str):
+        payment_entries = json.loads(payment_entries)
+    
+    # sales order is still draft now, no need to check payment against sales invoices
+    unallocated_amount = doc.grand_total
+    matched_pe = []
+    for pe in payment_entries:
+        if unallocated_amount <= 0:
+            break
+        pe_doc = frappe.get_doc('Payment Entry',pe)
+        if pe_doc.company != doc.company:
+            frappe.msgprint(_('Payment Entry {0} does not belong to company {1}'.format(pe_doc.name,doc.company)),alert=True)
+            continue
+        if pe_doc.docstatus == 0:
+            if pe_doc.paid_amount <= unallocated_amount:
+                pe_doc.update({
+                    'party_type': 'Customer',
+                    'party': doc.customer,
+                })
+                try:
+                    pe_doc.save().submit()
+                    unallocated_amount -= pe_doc.paid_amount
+                    matched_pe.append(pe_doc)
+                except Exception as e:
+                    frappe.log_error(e)
+                    frappe.msgprint(_('Check the Error Log for more information: {0}').format(pe_doc.name),alert=True)
+                    continue
+            else:
+                
+                diff_payment_entry = frappe.copy_doc(pe_doc)
+                diff_payment_entry.update({
+                    'paid_amount': pe_doc.paid_amount - unallocated_amount,
+                })
+
+                pe_doc.update({
+                    'party_type': 'Customer',
+                    'party': doc.customer,
+                    'paid_amount': unallocated_amount,
+                    'manual_split':1
+                })
+
+                try:
+                    pe_doc.save().submit()
+                    unallocated_amount -= pe_doc.paid_amount
+                    matched_pe.append(pe_doc)
+
+                    diff_payment_entry.insert()
+                    break
+                except Exception as e:
+                    frappe.log_error(e)
+                    frappe.msgprint(_('Check the Error Log for more information: {0}').format(pe_doc.name),alert=True)
+                    continue
+
+    return {
+        'matched_pe': matched_pe,
+        'unallocated_amount': unallocated_amount
+    }
