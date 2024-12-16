@@ -3,7 +3,15 @@ from frappe import _
 from erpnext.selling.doctype.sales_order.sales_order import SalesOrder
 from erpnext.selling.doctype.sales_order.sales_order import make_purchase_order_for_default_supplier
 import json
-
+from erpnext.accounts.doctype.payment_entry.payment_entry import (
+    set_party_type,
+    set_party_account,
+    set_party_account_currency,
+    set_paid_amount_and_received_amount,
+    get_bank_cash_account,
+    set_grand_total_and_outstanding_amount,
+    set_payment_type
+)
 
 class CustomSalesOrder(SalesOrder):
 
@@ -95,7 +103,6 @@ def select_payment_entry(**kwargs):
     filters = {k:v for k,v in kwargs.items() if v and k not in ('unallocated_amount','include_submitted_doc')}
     
     include_submitted_doc = kwargs.pop('include_submitted_doc')
-    frappe.log({'include_submitted_doc':type(include_submitted_doc)})
     if int(include_submitted_doc) == 1:
         filters['docstatus'] = ['<',2]
     else:
@@ -105,7 +112,6 @@ def select_payment_entry(**kwargs):
         filters['custom_payment_note'] = ['like', f'%{custom_payment_note}%']
     if reference_no:
         filters['reference_no'] = ['like', f'%{reference_no}%']
-    frappe.log(filters)
     results = frappe.get_list("Payment Entry", filters=filters, fields=fields)
     return results    
 
@@ -138,7 +144,6 @@ def validate_po_item_price(po,so):
             if d.rate == 0:
                 so_rate = [soi.rate for soi in so.items if soi.item_code == d.item_code][0]
                 d.rate = so_rate
-                frappe.log([d.item_code,so_rate])
         if so.apply_discount_on and so.discount_amount:
             po.apply_discount_on = so.apply_discount_on
             po.discount_amount = so.discount_amount
@@ -149,22 +154,60 @@ def matching_payment_entries(docname,payment_entries):
     if isinstance(payment_entries,str):
         payment_entries = json.loads(payment_entries)
     
+    payment_type = set_payment_type(doc.doctype, doc)
+    bank = get_bank_cash_account(doc, None)
+    party_type = set_party_type(doc.doctype)
+    party_account = set_party_account(doc.doctype, doc.name, doc, party_type)
+    party_account_currency = set_party_account_currency(doc.doctype, party_account, doc)
+
+    party_amount = None
+    bank_amount = None
+    grand_total, outstanding_amount = set_grand_total_and_outstanding_amount(
+        party_amount, doc.doctype, party_account_currency, doc
+    )
+    paid_amount, received_amount = set_paid_amount_and_received_amount(
+        doc.doctype, party_account_currency, bank, outstanding_amount, payment_type, bank_amount, doc
+    )
+
+    if outstanding_amount == 0:
+        frappe.throw(_('{0} {1} has already been fully paid.').format(_('Sales Order'), doc.name))
     # sales order is still draft now, no need to check payment against sales invoices
-    unallocated_amount = doc.grand_total
+    unallocated_amount = outstanding_amount
     matched_pe = []
+
     for pe in payment_entries:
         if unallocated_amount <= 0:
             break
         pe_doc = frappe.get_doc('Payment Entry',pe)
+        if pe_doc.docstatus == 1:
+            frappe.msgprint(_('Ignored row for {0}').format(pe_doc.name),alert=True)
+            continue
         if pe_doc.company != doc.company:
             frappe.msgprint(_('Payment Entry {0} does not belong to company {1}'.format(pe_doc.name,doc.company)),alert=True)
             continue
+
+        
+        
         if pe_doc.docstatus == 0:
+            
             if pe_doc.paid_amount <= unallocated_amount:
+                
                 pe_doc.update({
                     'party_type': 'Customer',
                     'party': doc.customer,
                 })
+                pe_doc.append(
+					"references",
+					{
+						"reference_doctype": doc.doctype,
+						"reference_name": doc.name,
+						"bill_no": doc.get("bill_no"),
+						"due_date": doc.get("due_date"),
+						"total_amount": grand_total,
+						"outstanding_amount": unallocated_amount,
+						"allocated_amount": pe_doc.paid_amount,
+					},
+				)
                 try:
                     pe_doc.save().submit()
                     unallocated_amount -= pe_doc.paid_amount
@@ -174,9 +217,9 @@ def matching_payment_entries(docname,payment_entries):
                     frappe.msgprint(_('Check the Error Log for more information: {0}').format(pe_doc.name),alert=True)
                     continue
             else:
-                
                 diff_payment_entry = frappe.copy_doc(pe_doc)
                 diff_payment_entry.update({
+                    'party':doc.customer,
                     'paid_amount': pe_doc.paid_amount - unallocated_amount,
                 })
 
@@ -186,13 +229,25 @@ def matching_payment_entries(docname,payment_entries):
                     'paid_amount': unallocated_amount,
                     'manual_split':1
                 })
-
+                pe_doc.append(
+					"references",
+					{
+						"reference_doctype": doc.doctype,
+						"reference_name": doc.name,
+						"bill_no": doc.get("bill_no"),
+						"due_date": doc.get("due_date"),
+						"total_amount": grand_total,
+						"outstanding_amount": unallocated_amount,
+						"allocated_amount": unallocated_amount,
+					},
+				)
                 try:
                     pe_doc.save().submit()
                     unallocated_amount -= pe_doc.paid_amount
                     matched_pe.append(pe_doc)
 
                     diff_payment_entry.insert()
+                    diff_payment_entry.add_comment("Comment",_('Split From {0} By System').format(pe_doc.name))
                     break
                 except Exception as e:
                     frappe.log_error(e)

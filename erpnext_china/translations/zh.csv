@@ -9210,3 +9210,5 @@ Query Payment Entry,查询收付款凭证
 Include Submitted Doc, 包含已提交单据
 Matching Payment Entry, 匹配收付款凭证
 Please Select Payment Entry Items And Click Matching Button To Match And Submit Entry, 请选择付款明细并点击匹配按钮以匹配和提交付款单
+Split From {0} By System, 由系统从单据{0}中拆分
+{0} {1} has already been fully paid., {0} {1} 已完全付款
