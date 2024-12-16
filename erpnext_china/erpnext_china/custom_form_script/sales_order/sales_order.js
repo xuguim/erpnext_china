@@ -50,6 +50,7 @@ frappe.ui.form.on('Sales Order', {
                 reference_no: dialog.get_value("reference_no"),
                 reference_date: dialog.get_value("reference_date"),
                 custom_payment_note: dialog.get_value("custom_payment_note"),
+                include_submitted_doc: dialog.get_value("include_submitted_doc"),
             }
             frappe.call("erpnext_china.erpnext_china.custom_form_script.sales_order.sales_order.select_payment_entry", query).then(r=>{
                 dialog.fields_dict.items.df.data.length = 0;
@@ -62,7 +63,8 @@ frappe.ui.form.on('Sales Order', {
                             unallocated_amount: pm.unallocated_amount,
                             reference_no: pm.reference_no,
                             reference_date: pm.reference_date,
-                            custom_payment_note: pm.custom_payment_note
+                            custom_payment_note: pm.custom_payment_note,
+                            docstatus: pm.docstatus == 0? `<span class="text-danger bold">${__('Draft')}</span>` : `<span class="text-success bold">${__('Submitted')}</span>`
                         });
                     });
                 }
@@ -117,6 +119,15 @@ frappe.ui.form.on('Sales Order', {
                         handleFieldOnChange()
                     }
 				},
+                {
+                    fieldname: "include_submitted_doc",
+                    fieldtype: "Check",
+                    label: __("Include Submitted Doc"),
+                    default: 0,
+                    onchange: ()=>{
+                        handleFieldOnChange()
+                    }
+                },
 				{ fieldtype: "Column Break" },
                 {
 					fieldname: "total_allocated_amount",
@@ -167,6 +178,7 @@ frappe.ui.form.on('Sales Order', {
 					allow_bulk_edit: false,
 					cannot_add_rows: true,
 					cannot_delete_rows: true,
+                    description:`<span class="text-success">${__('Please Select Payment Entry Items And Click Matching Button To Match And Submit Entry')}</span>`,
 					data: [],
 					fields: [
 						{
@@ -218,11 +230,20 @@ frappe.ui.form.on('Sales Order', {
                             columns: 1,
                         },
                         {
+                            fieldname: "docstatus",
+                            fieldtype: "Data",
+                            label: __("Doc Status"),
+                            read_only: 1,
+							in_list_view: 1,
+                            columns: 1,
+                        },
+                        {
                             fieldname: "custom_payment_note",
                             fieldtype: "Data",
                             label: __("转账备注"),
                             read_only: 1,
 							in_list_view: 1,
+                            // columns: 1,
                         },
 					],
 				},
@@ -232,6 +253,56 @@ frappe.ui.form.on('Sales Order', {
                 handleFieldOnChange();
                 frappe.msgprint('查询完成')
 			},
+            secondary_action: () => {
+                let selected_rows = dialog.fields_dict.items.grid.get_selected_children()
+                if(selected_rows?.length > 0){
+                    let pe_names = selected_rows.map(item=>{
+                        return item.name
+                    })
+                    frappe.call({
+                        method:"erpnext_china.erpnext_china.custom_form_script.sales_order.sales_order.matching_payment_entries",
+                        args:{
+                            docname: frm.doc.name,
+                            payment_entries:pe_names
+                        },
+                        callback:(r)=>{
+                            if(r.message){
+                                let item_html = ''
+                                r.message.matched_pe?.forEach((item)=>{
+                                    item_html += `
+                                        <tr>
+                                            <td>
+                                                <a href="${frappe.utils.get_form_link('Payment Entry',item.name)}" >${item.name}</a></td>
+                                            <td class="text-right">${item.paid_amount}</td>
+                                            <td class="text-right">${item.unallocated_amount}</td>
+                                        </tr>`
+                                })
+
+                                let msg = `
+                                    <h5 class="margin-top">付款单匹配情况</h5>
+                                    <p>订单金额：${frm.doc.grand_total}</p>
+                                    <p>已匹配金额：${frm.doc.grand_total - r.message.unallocated_amount}</p>
+                                    <p class="text-danger">未分配金额：${r.message.unallocated_amount}</p>
+                                    <p>已匹配付款单信息如下：<p>
+                                    <div>
+                                        <table class="table table-bordered">
+                                            <tr class="grid-heading-row text-center">
+                                                <th width="33%">${__("Payment Entry")}</th>
+                                                <th width="33%">${__('Paid Amount')}</th>
+                                                <th width="33%">${__('Unallocated Amount')}</th>
+                                            </tr>
+                                            ${item_html}
+                                        </table>
+                                    </div>
+                                `
+
+                                frappe.msgprint(msg);
+                            }
+                        }
+                    })
+                }
+            },
+            secondary_action_label: __("Matching Payment Entry"),
         });
 		dialog.fields_dict.items.grid.refresh();
 		dialog.show();
