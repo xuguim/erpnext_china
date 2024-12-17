@@ -54,8 +54,11 @@ frappe.ui.form.on('Sales Order', {
             }
             frappe.call("erpnext_china.erpnext_china.custom_form_script.sales_order.sales_order.select_payment_entry", query).then(r=>{
                 dialog.fields_dict.items.df.data.length = 0;
+                dialog.get_secondary_btn().addClass("disabled");
+                let draft_pe_num = 0;
                 if (r.message && r.message.length > 0) {
                     r.message.forEach(pm => {
+                        if(pm.docstatus == 0) draft_pe_num++
                         dialog.fields_dict.items.df.data.push({
                             name: pm.name,
                             bank_account: pm.bank_account,
@@ -67,6 +70,9 @@ frappe.ui.form.on('Sales Order', {
                             docstatus: pm.docstatus == 0? `<span class="text-danger bold">${__('Draft')}</span>` : `<span class="text-success bold">${__('Submitted')}</span>`
                         });
                     });
+                }
+                if(draft_pe_num > 0 && frm.doc.docstatus == 1) {
+                    dialog.get_secondary_btn().removeClass("disabled");
                 }
                 dialog.fields_dict.items.grid.refresh();
             })
@@ -273,16 +279,16 @@ frappe.ui.form.on('Sales Order', {
                                         <tr>
                                             <td>
                                                 <a href="${frappe.utils.get_form_link('Payment Entry',item.name)}" >${item.name}</a></td>
-                                            <td class="text-right">${item.paid_amount}</td>
-                                            <td class="text-right">${item.unallocated_amount}</td>
+                                            <td class="text-right">${fmt_money(item.paid_amount)}</td>
+                                            <td class="text-right">${fmt_money(item.unallocated_amount)}</td>
                                         </tr>`
                                 })
 
                                 let msg = `
                                     <h5 class="margin-top">付款单匹配情况</h5>
-                                    <p>订单金额：${frm.doc.grand_total}</p>
-                                    <p>已匹配金额：${frm.doc.grand_total - r.message.unallocated_amount}</p>
-                                    <p class="text-danger">未分配金额：${r.message.unallocated_amount}</p>
+                                    <p>订单金额：${fmt_money(frm.doc.grand_total)}</p>
+                                    <p>已匹配金额：${fmt_money(frm.doc.grand_total - r.message.unallocated_amount)}</p>
+                                    <p class="text-danger">未分配金额：${fmt_money(r.message.unallocated_amount)}</p>
                                     <p>已匹配付款单信息如下：<p>
                                     <div>
                                         <table class="table table-bordered">
@@ -295,8 +301,10 @@ frappe.ui.form.on('Sales Order', {
                                         </table>
                                     </div>
                                 `
-
-                                frappe.msgprint(msg);
+                                if(r.message.matched_pe?.length > 0) {
+                                    frappe.msgprint(msg);
+                                }
+                                handleFieldOnChange();
                             }
                         }
                     })
