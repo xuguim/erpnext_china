@@ -32,6 +32,13 @@ frappe.ui.form.on('Sales Order', {
             () => frm.events.select_payment_entry(frm),
         );
         // }
+        if(frm.doc.docstatus == 1 && !in_list(["Completed"],frm.doc.status)){
+            frm.add_custom_button(
+                __("Customer Payment Confirmation"),
+                () => frm.events.create_customer_payment_confirmation(frm),
+                __("Create")
+            )
+        }
     },
     select_payment_entry(frm) {
         const handleFieldOnChange = ()=>{
@@ -311,6 +318,11 @@ frappe.ui.form.on('Sales Order', {
 		dialog.show();
         handleFieldOnChange();
 	},
+
+    create_customer_payment_confirmation(frm) {
+        frm.sales_order = frm.docname
+        frm.make_new("Customer Payment Confirmation")
+    }
 })
 
 
