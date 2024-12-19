@@ -93,3 +93,7 @@ fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "ERPNext China"]]},
     {"dt": "Property Setter", "filters": [["module", "=", "ERPNext China"]]},
 ]
+
+override_doctype_dashboards = {
+	"Sales Order": "erpnext_china.erpnext_china.custom_form_script.sales_order.sales_order_dashboard.get_data"
+}
