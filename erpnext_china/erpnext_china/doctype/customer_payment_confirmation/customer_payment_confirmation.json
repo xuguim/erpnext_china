@@ -1,0 +1,245 @@
+{
+ "actions": [],
+ "allow_events_in_timeline": 1,
+ "allow_rename": 1,
+ "autoname": "format:CPC-{YY}-{MM}-{#####}",
+ "creation": "2024-12-19 08:04:33.389618",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_order",
+  "column_break_wgkf",
+  "transaction_date",
+  "employee",
+  "column_break_xavo",
+  "company",
+  "section_break_refr",
+  "customer",
+  "customer_name",
+  "column_break_qpnw",
+  "grand_total",
+  "column_break_hkqu",
+  "paid_amount",
+  "section_break_mwff",
+  "bank_account",
+  "bank",
+  "bank_account_no",
+  "account",
+  "column_break_zmda",
+  "iban",
+  "branch_code",
+  "swift_number",
+  "column_break_ghes",
+  "transaction_id",
+  "section_break_dhek",
+  "notes",
+  "section_break_24zf",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_24zf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Customer Payment Confirmation",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fetch_from": "customer.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_wgkf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "mandatory_depends_on": "eval:!frappe.user.has_role('System Manager')",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "sales_order.grand_total",
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_xavo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_refr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_qpnw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_hkqu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_mwff",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "bank_account",
+   "fieldtype": "Link",
+   "label": "Bank Account",
+   "options": "Bank Account"
+  },
+  {
+   "fetch_from": "bank_account.bank",
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "label": "Bank",
+   "options": "Bank",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "bank_account.iban",
+   "fieldname": "iban",
+   "fieldtype": "Read Only",
+   "label": "IBAN"
+  },
+  {
+   "fieldname": "section_break_dhek",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_zmda",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "bank_account.branch_code",
+   "fieldname": "branch_code",
+   "fieldtype": "Read Only",
+   "label": "Branch Code"
+  },
+  {
+   "fetch_from": "bank.swift_number",
+   "fieldname": "swift_number",
+   "fieldtype": "Read Only",
+   "label": "SWIFT Number"
+  },
+  {
+   "fieldname": "column_break_ghes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "bank_account.account",
+   "fieldname": "account",
+   "fieldtype": "Read Only",
+   "label": "Account"
+  },
+  {
+   "fieldname": "transaction_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Transaction Date",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Transaction ID"
+  },
+  {
+   "fetch_from": "bank_account.bank_account_no",
+   "fieldname": "bank_account_no",
+   "fieldtype": "Read Only",
+   "label": "Bank Account No"
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2024-12-19 10:16:10.612132",
+ "modified_by": "Administrator",
+ "module": "ERPNext China",
+ "name": "Customer Payment Confirmation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1,
+ "track_views": 1
+}
