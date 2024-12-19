@@ -1,5 +1,6 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
+from collections import Counter
 import frappe
 from erpnext.setup.doctype.employee.employee import *
 from datetime import datetime
@@ -19,7 +20,8 @@ class CustomEmployee(Employee):
 		self.validate_status()
 		self.validate_reports_to()
 		self.validate_preferred_email()
-		
+		self.validate_unique_salary_component_item()
+
 		#定制
 		self.set_gender()
 		self.set_date_of_birth()
@@ -93,6 +95,13 @@ class CustomEmployee(Employee):
 		if not self.custom_housing_provident_fund:
 			self.custom_housing_provident_fund_pay_type = None
 			self.custom_housing_provident_fund_base_rate = 0
+
+	def has_duplicates(self):
+		return any(count > 1 for count in Counter([i.salary_component for i in self.custom_salary_components_items]).values())
+
+	def validate_unique_salary_component_item(self):
+		if self.has_duplicates():
+			frappe.throw('薪资构成项不可重复！')
 
 @frappe.whitelist()
 def get_employee_tree(parent = None, 
