@@ -26,6 +26,8 @@ class CustomEmployee(Employee):
 		self.set_city_of_birth()
 		self.set_degree()
 		self.set_two_social_insurance()
+		self.set_three_social_insurance()
+		self.set_housing_provident_fund()
 
 		if self.user_id:
 			self.validate_user_details()
@@ -81,7 +83,16 @@ class CustomEmployee(Employee):
 			self.custom_two_social_insurance_pay_type = None
 			self.custom_two_social_insurance_base_rate = 0
 			
-
+	def set_three_social_insurance(self):
+		if not self.custom_three_social_insurance:
+			self.custom_three_social_insurance_pay_type = None
+			self.custom_three_social_insurance_base_rate = 0
+			self.custom_social_security_payment_company = None
+	
+	def set_housing_provident_fund(self):
+		if not self.custom_housing_provident_fund:
+			self.custom_housing_provident_fund_pay_type = None
+			self.custom_housing_provident_fund_base_rate = 0
 
 @frappe.whitelist()
 def get_employee_tree(parent = None, 
