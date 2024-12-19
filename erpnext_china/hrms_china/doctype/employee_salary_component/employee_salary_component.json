@@ -15,8 +15,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Salary Component",
-   "options": "Salary Component",
-   "unique": 1
+   "options": "Salary Component"
   },
   {
    "fieldname": "amount",
