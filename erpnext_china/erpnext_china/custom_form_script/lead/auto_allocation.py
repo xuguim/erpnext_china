@@ -36,7 +36,6 @@ def auto_allocate(doc):
 		frappe.msgprint("当前分配规则下没有可分配员工！将自动分配给创建员工")
 		lead_to_owner_or_public(doc)
 	else:
-		items = sorted(items, key=lambda x: frappe.utils.get_datetime(x.zero_datetime))
 		items = get_items_from_filters(doc.custom_product_category, doc.source, items)
 		if len(items) == 0:
 			frappe.msgprint(f"产品类别：{doc.custom_product_category}，源：{doc.source} 没有可分配员工！将自动分配给创建员工")
@@ -53,6 +52,7 @@ def auto_allocate(doc):
 				if len(final_items) == 0:
 					# 如果本轮次已经分配满了重置
 					final_items = reset_allocated_count(can_allocate_items)
+				final_items = sorted(final_items, key=lambda x: frappe.utils.get_datetime(x.zero_datetime))
 				lead_to_employee(doc, final_items[0])
 
 def get_items_from_rules():
@@ -93,32 +93,61 @@ def get_items_from_allocation_limit(items):
 	"""
 	查找本轮次可分配员工
 	"""
-	results  = []
-	for item in items:
-		if check_allocated_limit(item.count, item.allocated_count):
-			results.append(item)
-	return results
+	return [item for item in items if item.count > item.allocated_count]
+
+# def get_items_from_total_limit(items):
+# 	"""
+# 	查找客保数量未到限制的员工
+# 	"""
+# 	results = []
+# 	for item in items:
+# 		if check_lead_total_limit(item.employee):
+# 			results.append(item)
+# 	return results
 
 def get_items_from_total_limit(items):
-	"""
-	查找客保数量未到限制的员工
-	"""
-	results = []
-	for item in items:
-		if check_lead_total_limit(item.employee):
-			results.append(item)
-	return results
+    """
+    查找客保数量未到限制的员工
+    """
+    # 提取所有涉及的员工并去重
+    employees = {item.employee for item in items}
+    
+    # 批量获取所有员工的 custom_lead_total
+    employee_limits = frappe.db.get_all(
+        "Employee", 
+        filters={"name": ["in", list(employees)]}, 
+        fields=['name', 'custom_lead_total']
+    )
+    employee_limits = {emp.name: emp.custom_lead_total or 0 for emp in employee_limits}
 
-def check_allocated_limit(count:int, allocated_count: int)->bool:
-	"""
-	判断本轮次是否已经分配满额
+    # 批量获取每个员工的未转换线索数量
+    lead_counts = frappe.db.get_all(
+        "Lead",
+        filters={"status": ["!=", "Converted"],"name": ["in", list(employees)]},
+        fields=["custom_lead_owner_employee", "COUNT(*) as count"],
+        group_by="custom_lead_owner_employee"
+    )
+    lead_counts = {lc['custom_lead_owner_employee']: lc['count'] for lc in lead_counts}
 
-	:param: count: 配额
-	:param: allocated_count: 已分配数量
-	"""
-	if count > allocated_count:
-		return True
-	return False
+    # 筛选出客保数量未达到限制的员工
+    valid_employees = {
+        emp: limit for emp, limit in employee_limits.items()
+        if lead_counts.get(emp, 0) < limit
+    }
+
+    # 返回符合要求的 items
+    return [item for item in items if item.employee in valid_employees]
+
+# def check_allocated_limit(count:int, allocated_count: int)->bool:
+# 	"""
+# 	判断本轮次是否已经分配满额
+
+# 	:param: count: 配额
+# 	:param: allocated_count: 已分配数量
+# 	"""
+# 	if count > allocated_count:
+# 		return True
+# 	return False
 
 def check_lead_total_limit(employee: str) -> bool:
 	"""
@@ -245,10 +274,10 @@ def is_time_in_range(start, end, current_time: datetime.time) -> bool:
 
 def is_date_in_range(start, end, current_date: datetime.date):
 	if isinstance(start, str):
-		start = datetime.strptime(start, '%Y-%m-%d').date()
+		start = datetime.strptime(start, r'%Y-%m-%d').date()
 	if isinstance(end, str):
-		start = datetime.strptime(end, '%Y-%m-%d').date()
-	return start <= current_date <= start
+		end = datetime.strptime(end, r'%Y-%m-%d').date()
+	return start <= current_date <= end
 
 
 def is_today_in_weekdays(week_string: str, current_weekday: int):

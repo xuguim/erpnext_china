@@ -190,7 +190,7 @@ class CustomLead(Lead):
 			if not self.custom_original_lead_name:
 				self._custom_comment = f'初始手动录入，{self._custom_comment}给：{self.lead_owner}，规则：{self._rule_name}'
 			else:
-				self._custom_comment = f'初始自动录入，{self._custom_comment}给：{self.lead_owner}，规则：{self._rule_name}'
+				self._custom_comment = f'初始自动录入，自动分配给：{self.lead_owner}，规则：{self._rule_name}'
 		else:
 			if self.has_value_changed("lead_owner"):
 				text = f"{self._custom_comment}给：{self.lead_owner}，规则：{self._rule_name}"
