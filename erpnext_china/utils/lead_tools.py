@@ -150,6 +150,8 @@ def get_or_insert_crm_lead(
 		}
 		# 插入新记录
 		record = frappe.get_doc(crm_lead_data).insert(ignore_permissions=True)
+		if not record:
+			frappe.throw(f'lead creation failure')
 	return record
 
 
