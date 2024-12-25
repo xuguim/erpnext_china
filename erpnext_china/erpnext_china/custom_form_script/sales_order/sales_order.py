@@ -91,7 +91,14 @@ class CustomSalesOrder(SalesOrder):
             if len(res) > 0:
                 self.final_customer = res[0].customer
 
-    
+    def validate(self):
+        super().validate()
+        self.validate_taxes_and_charges_of_company()
+
+    def validate_taxes_and_charges_of_company(self):
+        if self.company == '临时' and self.taxes_and_charges:
+            frappe.throw('临时公司无需设置销项税/费')
+
 @frappe.whitelist()
 def select_payment_entry(**kwargs):
     kwargs.pop('cmd')
