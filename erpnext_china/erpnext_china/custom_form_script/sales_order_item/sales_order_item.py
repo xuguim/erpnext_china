@@ -5,4 +5,7 @@ from erpnext.stock.dashboard.item_dashboard import get_data
 class CustomSalesOrderItem(SalesOrderItem):
 	@property
 	def realtime_stock_qty(self):
-		return get_data(self.item_code, self.warehouse)[0].actual_qty
+		items = get_data(self.item_code, self.warehouse)
+		if len(items) > 0:
+			return items[0].actual_qty
+		return 0
