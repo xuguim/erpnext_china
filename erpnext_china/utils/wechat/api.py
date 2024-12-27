@@ -3,6 +3,7 @@ import json
 import requests
 import xmltodict
 import base64
+from datetime import datetime
 from werkzeug.wrappers import Response
 
 from frappe.utils import logger, get_url
@@ -284,6 +285,27 @@ def qv_create_crm_lead(message=None, original_lead=None):
 		logger.error(e)
 
 
+def update_card_template(response_code, from_user, confirm_code):
+	wecom_setting = frappe.get_doc("WeCom Setting")
+	access_token = wecom_setting.access_token
+	url = "https://qyapi.weixin.qq.com/cgi-bin/message/update_template_card"
+	params = {
+		'access_token': access_token
+	}
+	msg = '已确认信息正确'
+	if confirm_code != '1':
+		msg = '已确认信息错误，请联系【柴春燕】进行修改'
+	data = {
+		"userids" : [from_user],
+		"agentid" : 1000008,
+		"response_code": response_code,
+		"button":{
+			"replace_name": msg
+		}
+	}
+	resp = requests.post(url, params=params, json=data)
+
+
 @frappe.whitelist(allow_guest=True)
 def wechat_msg_callback(**kwargs):
 	url = get_url() + frappe.request.full_path
@@ -308,6 +330,27 @@ def wechat_msg_callback(**kwargs):
 		dict_content = xmltodict.parse(xml_content)
 		dict_data = dict_content.get('xml')
 		change_type = dict_data.get('ChangeType')
+
+		response_code = dict_data.get('ResponseCode')
+		if response_code:
+			event_key = dict_data.get('EventKey')
+			str_list = str(event_key).split('_')
+			employee_name = str_list[0]
+			confirm_code = str_list[1]
+			from_user = dict_data.get('FromUserName')
+			update_card_template(response_code, from_user, confirm_code)
+			if frappe.db.exists('WeCom Message Confirmation', employee_name):
+				doc = frappe.get_doc('WeCom Message Confirmation', employee_name)
+			else:
+				doc = frappe.new_doc('WeCom Message Confirmation')
+				doc.employee = employee_name
+			if confirm_code == '1':
+				doc.right = 1
+				doc.error = 0
+			else:
+				doc.error = 1
+				doc.right = 0
+			doc.save(ignore_permissions=True)
 
 		# 如果是获客助手新增客户
 		if change_type == 'add_external_contact':
