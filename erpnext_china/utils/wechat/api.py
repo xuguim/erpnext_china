@@ -294,7 +294,7 @@ def update_card_template(response_code, from_user, confirm_code):
 	}
 	msg = '已确认信息正确'
 	if confirm_code != '1':
-		msg = '已确认信息错误，请联系【柴春燕】进行修改'
+		msg = '已确认信息有误，请联系柴春燕同事进行修改'
 	data = {
 		"userids" : [from_user],
 		"agentid" : 1000008,
