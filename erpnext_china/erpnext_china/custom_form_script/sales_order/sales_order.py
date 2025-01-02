@@ -87,7 +87,7 @@ class CustomSalesOrder(SalesOrder):
             po_name = reference_po[0]
             query = f"""
                 select
-                    so.customer
+                    so.customer, so.name
                 from
                     (select
                         distinct poi.sales_order
@@ -103,6 +103,7 @@ class CustomSalesOrder(SalesOrder):
             res = frappe.db.sql(query,as_dict=1)
             if len(res) > 0:
                 self.final_customer = res[0].customer
+                self.custom_original_sales_order = res[0].name
 
     def validate(self):
         super().validate()
