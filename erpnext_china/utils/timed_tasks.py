@@ -199,6 +199,7 @@ def task_check_user_in_wecom():
 	
 	# 如果本地存在，企微不存在，则将用户关闭
 	wecom_not_exist_users = local_user_id_list - wecom_user_id_set
+	frappe.set_user('Administrator')
 	for user in wecom_not_exist_users:
 		if user:
 			name = local_user_dict.get(user)
