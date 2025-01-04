@@ -247,6 +247,26 @@ def update_checkin_group(access_token, group: dict, effective_now=False):
 	if result.get('errcode') != 0:
 		frappe.throw("考勤规则修改失败！" + result.get('errmsg', ''))
 
+def get_access_token_by_secret():
+	url = 'https://qyapi.weixin.qq.com/cgi-bin/gettoken'
+	params = {
+		'corpid': 'wwb5d592cbfd08e9b1',
+		'corpsecret': 'pYH-hX3jAPSSqHMEiOCX2hwhNlmXQqN9yLpo39qBBKE'
+	}
+	resp = requests.get(url, params=params)
+	result = resp.json()
+	access_token = result.get('access_token')
+	return access_token
+
+def get_all_user_list_id(access_token):
+	# 必须通过通讯录同步Secret获取
+	url = 'https://qyapi.weixin.qq.com/cgi-bin/user/list_id'
+	params = {
+		'access_token': access_token
+	}
+	resp = requests.post(url, params=params)
+	result = resp.json()
+	return result.get('dept_user')
 
 def get_raw_request(url, raw_xml_data):
 	if isinstance(raw_xml_data, str):

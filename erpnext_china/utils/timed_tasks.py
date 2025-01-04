@@ -166,21 +166,19 @@ def task_get_check_in_data():
 
 def disable_user(name):
 	# 使用管理员账号进行修改
-	frappe.set_user('Administrator')
 	doc = frappe.get_doc("User", name)
 	try:
-		doc.enabled = False
-		doc.save()
-		frappe.db.commit()
-	except:  # 有的可能因为信息不全报错
+		if doc.enabled:
+			doc.enabled = False
+			doc.save(ignore_permissions=True)
+	except:  # 有的可能因为信息不全在保存时报错
 		pass
 
 
 @frappe.whitelist(allow_guest=True)
 def task_check_user_in_wecom():
-	users = frappe.get_all("User", filters={"enabled": True}, fields=["name", "custom_wecom_uid"])
-	setting = frappe.get_doc("WeCom Setting")
-	access_token = setting.access_token
+	# 这里需要通过通讯录secret获取到单独的access_token
+	access_token = api.get_access_token_by_secret()
 	
 	# 预定义白名单
 	whitelist = [
@@ -190,7 +188,22 @@ def task_check_user_in_wecom():
 		"Guest",
 		"admin2@zhushigroup.cn"
 	]
-	for user in users:
-		user_id = user.custom_wecom_uid or user.name
-		if user_id not in whitelist and not api.check_wecom_user(user_id, access_token):
-			disable_user(user.name)
+	users = api.get_all_user_list_id(access_token)
+	# 企微中所有的用户的id
+	wecom_user_id_set = set([user.get("userid") for user in users])
+	
+	# 获取数据库中所有的user
+	local_user_list = frappe.get_all("User", fields=["name", "custom_wecom_uid"])
+	local_user_dict = {user.custom_wecom_uid: user.name for user in local_user_list}
+	local_user_id_list = set(local_user_dict.keys())
+	
+	# 如果本地存在，企微不存在，则将用户关闭
+	wecom_not_exist_users = local_user_id_list - wecom_user_id_set
+	for user in wecom_not_exist_users:
+		if user:
+			name = local_user_dict.get(user)
+			if name not in whitelist:
+				disable_user(name)
+	frappe.db.commit()
+
+			
