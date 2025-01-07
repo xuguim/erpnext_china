@@ -12,6 +12,7 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
     set_grand_total_and_outstanding_amount,
     set_payment_type
 )
+import frappe.utils
 
 class CustomSalesOrder(SalesOrder):
 
@@ -127,7 +128,7 @@ class CustomSalesOrder(SalesOrder):
                 item_doc = frappe.get_doc("Item", item.item_code)
                 # 如果物料没有指定任何开发人，则允许销售
                 developer_list = item_doc.item_developer_list_item
-                if not developer_list or len(developer_list) == 0:
+                if not developer_list or len(developer_list) == 0 or 'Administrator' in frappe.get_roles(frappe.session.user):
                     continue
                 developer_employee_list = [dev.employee for dev in developer_list]
                 # 如果员工及上级不在允许销售负责人列表中
