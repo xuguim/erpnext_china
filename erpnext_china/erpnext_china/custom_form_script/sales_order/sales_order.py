@@ -12,6 +12,7 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
     set_grand_total_and_outstanding_amount,
     set_payment_type
 )
+import frappe.utils
 
 class CustomSalesOrder(SalesOrder):
 
@@ -65,16 +66,19 @@ class CustomSalesOrder(SalesOrder):
 
     def set_employee_and_department(self):
         if self.is_new():
-            try:
-                employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, ["name", "department"], as_dict=1)
-                if employee:
-                    self.custom_employee = employee.name
-                    self.custom_department = employee.department
-            except:
-                pass
+            employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, ["name", "department"], as_dict=1)
+            if employee:
+                self.custom_employee = employee.name
+                self.custom_department = employee.department
+    
+    def set_freight(self):
+        if self.is_new() and self.custom_original_sales_order:
+            custom_freight = frappe.db.get_value('Sales Order', self.custom_original_sales_order, 'custom_freight')
+            self.custom_freight = custom_freight
 
     def before_save(self):
         self.set_employee_and_department()
+        self.set_freight()
 
     def clear_drop_ship(self):
         for d in self.get("items"):
@@ -108,10 +112,41 @@ class CustomSalesOrder(SalesOrder):
     def validate(self):
         super().validate()
         self.validate_taxes_and_charges_of_company()
+        self.validate_user_can_sell_item()
 
     def validate_taxes_and_charges_of_company(self):
         if self.company == '临时' and self.taxes_and_charges:
             frappe.throw('临时公司无需设置销项税/费')
+
+    def validate_user_can_sell_item(self):
+        if self.is_new():
+            current_employee = frappe.db.get_value("Employee", filters={"user_id": frappe.session.user}, fieldname='name')
+            leaders = get_employee_all_leaders(current_employee)
+            leaders.append(current_employee)
+            can_not_sell_items = []
+            for item in self.items:
+                item_doc = frappe.get_doc("Item", item.item_code)
+                # 如果物料没有指定任何开发人，则允许销售
+                developer_list = item_doc.item_developer_list_item
+                if not developer_list or len(developer_list) == 0 or 'Administrator' in frappe.get_roles(frappe.session.user):
+                    continue
+                developer_employee_list = [dev.employee for dev in developer_list]
+                # 如果员工及上级不在允许销售负责人列表中
+                if len(set(leaders) & set(developer_employee_list)) == 0:
+                    can_not_sell_items.append(item_doc.item_name)
+            
+            if len(can_not_sell_items) > 0:
+                msg = ', '.join(can_not_sell_items) + ' 不在可销售范围内'
+                frappe.throw(msg)
+
+def get_employee_all_leaders(employee, leaders=None):
+    if leaders is None:
+        leaders = []
+    reports_to = frappe.db.get_value("Employee", filters={"name": employee}, fieldname="reports_to")
+    if reports_to:
+        leaders.append(reports_to)
+        get_employee_all_leaders(reports_to, leaders)
+    return leaders
 
 @frappe.whitelist()
 def select_payment_entry(**kwargs):
