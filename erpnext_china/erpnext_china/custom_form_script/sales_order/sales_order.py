@@ -65,16 +65,19 @@ class CustomSalesOrder(SalesOrder):
 
     def set_employee_and_department(self):
         if self.is_new():
-            try:
-                employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, ["name", "department"], as_dict=1)
-                if employee:
-                    self.custom_employee = employee.name
-                    self.custom_department = employee.department
-            except:
-                pass
+            employee = frappe.db.get_value('Employee', {'user_id': frappe.session.user}, ["name", "department"], as_dict=1)
+            if employee:
+                self.custom_employee = employee.name
+                self.custom_department = employee.department
+    
+    def set_freight(self):
+        if self.is_new() and self.custom_original_sales_order:
+            custom_freight = frappe.db.get_value('Sales Order', self.custom_original_sales_order, 'custom_freight')
+            self.custom_freight = custom_freight
 
     def before_save(self):
         self.set_employee_and_department()
+        self.set_freight()
 
     def clear_drop_ship(self):
         for d in self.get("items"):
