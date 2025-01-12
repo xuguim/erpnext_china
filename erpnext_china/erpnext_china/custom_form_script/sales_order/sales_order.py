@@ -198,7 +198,7 @@ def validate_po_item_price(po,so):
     if frappe.get_all('Price List',filters={'buying':1,'selling':1,'currency':so.currency}):
         for d in po.items:
             if d.rate == 0:
-                so_rate = [soi.rate for soi in so.items if soi.item_code == d.item_code][0]
+                so_rate = [soi.rate for soi in so.items if soi.name == d.sales_order_item][0]
                 d.rate = so_rate
         if so.apply_discount_on and so.discount_amount:
             po.apply_discount_on = so.apply_discount_on
