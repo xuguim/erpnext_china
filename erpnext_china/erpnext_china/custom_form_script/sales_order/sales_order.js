@@ -24,6 +24,12 @@ frappe.ui.form.on('Sales Order', {
                 ]
             };
         });
+        
+        frm.set_query("coupon_code", function(doc) {
+            return {
+                query:"erpnext_china_mdm.mdm.custom_form_script.sales_order.sales_order.query_coupon_code",
+            }
+        })
 
         // 添加按钮弹出dialog来筛选收付款凭证
         if(frappe.user.has_role('销售会计')) {
