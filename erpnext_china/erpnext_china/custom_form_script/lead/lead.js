@@ -133,10 +133,11 @@ frappe.ui.form.on('Lead', {
             }
 
         } else {
-            frappe.db.get_value('User', filters={'name': frappe.user.name, 'role_profile_name': '网推'}, fieldname='name').then(r=>{
-                if (!r.message.name) {
-                    frm.doc.source = '其它'
-                    frm.doc.custom_other_source = '业务自录入'
+            frappe.db.get_value('User', filters={'name': frappe.user.name, 'role_profile_name': '销售'}, fieldname='name').then(r=>{
+                if (r.message.name) {
+                    frm.doc.source = '业务自录入'
+                    frm.doc.custom_other_source = ''
+                    frm.set_df_property("source", "read_only", "1");
                 } else {
                     frm.set_df_property("source", "reqd", "1");
                 }

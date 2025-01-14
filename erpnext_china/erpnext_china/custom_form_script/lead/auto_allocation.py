@@ -123,7 +123,11 @@ def get_items_from_total_limit(items):
     # 批量获取每个员工的未转换线索数量
     lead_counts = frappe.db.get_all(
         "Lead",
-        filters={"status": ["!=", "Converted"],"custom_lead_owner_employee": ["in", list(employees)]},
+        filters={
+			"custom_lead_owner_employee": ["in", list(employees)],
+			"status": ["!=", "Converted"],
+			"source": ["!=", "业务自录入"]
+		},
         fields=["custom_lead_owner_employee", "COUNT(*) as count"],
         group_by="custom_lead_owner_employee"
     )
