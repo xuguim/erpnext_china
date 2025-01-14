@@ -258,7 +258,7 @@ def get_lead(**kwargs):
 		lead = frappe.get_doc('Lead', lead_name)
 		if not lead.custom_lead_owner_employee or not lead.lead_owner:
 			employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, fieldname="name")
-			if auto_allocation.check_lead_total_limit(employee):
+			if lead.source == '业务自录入' or auto_allocation.check_lead_total_limit(employee):
 				lead.custom_lead_owner_employee = employee
 				lead.lead_owner = frappe.session.user
 				auto_allocation.to_private(lead)
@@ -298,7 +298,8 @@ def get_employee_lead_total(**kwargs):
 	else:
 		count = frappe.db.count("Lead", {
 			"custom_lead_owner_employee": obj.name,
-			"status": ["!=", "Converted"]
+			"status": ["!=", "Converted"],
+			"source": ["!=", "业务自录入"]
 		})
 		value = (obj.custom_lead_total or 0) - count
 	
