@@ -14,7 +14,7 @@ def lead_before_save_handle(doc):
 		# 保存前有线索负责员工，说明是手动录入或修改
 		if lead_owner_employee:
 			if doc.has_value_changed("custom_lead_owner_employee"):
-				if not check_lead_total_limit(lead_owner_employee):
+				if doc.source != "业务自录入" and not check_lead_total_limit(lead_owner_employee):
 					frappe.throw("当前线索负责人客保数量已满，请选择其他负责人！")
 				else:
 					to_private(doc)
@@ -95,16 +95,6 @@ def get_items_from_allocation_limit(items):
 	"""
 	return [item for item in items if item.count > item.allocated_count]
 
-# def get_items_from_total_limit(items):
-# 	"""
-# 	查找客保数量未到限制的员工
-# 	"""
-# 	results = []
-# 	for item in items:
-# 		if check_lead_total_limit(item.employee):
-# 			results.append(item)
-# 	return results
-
 def get_items_from_total_limit(items):
     """
     查找客保数量未到限制的员工
@@ -163,7 +153,8 @@ def check_lead_total_limit(employee: str) -> bool:
 	custom_lead_total = frappe.db.get_value("Employee", employee, fieldname="custom_lead_total") or 0
 	count = frappe.db.count("Lead", {
 		"custom_lead_owner_employee": employee,
-		"status": ["!=", "Converted"]
+		"status": ["!=", "Converted"],
+		"source": ["!=", "业务自录入"]
 	})
 	if count >= custom_lead_total:
 		return False
@@ -188,7 +179,7 @@ def allocate_lead_to_owner(doc)->bool:
 	if not employee:
 		frappe.msgprint("当前线索创建人没有员工信息！")
 		return False
-	if check_lead_total_limit(employee):
+	if doc.source == "业务自录入" or check_lead_total_limit(employee):
 		doc.custom_lead_owner_employee = employee
 		doc.lead_owner = user
 		to_private(doc)
