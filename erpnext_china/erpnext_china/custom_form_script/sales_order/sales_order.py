@@ -13,6 +13,8 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import (
     set_payment_type
 )
 import frappe.utils
+from erpnext.selling.doctype.sales_order.sales_order import WarehouseRequired
+from frappe.utils import cint
 
 class CustomSalesOrder(SalesOrder):
 
@@ -138,7 +140,94 @@ class CustomSalesOrder(SalesOrder):
             if len(can_not_sell_items) > 0:
                 msg = ', '.join(can_not_sell_items) + ' 不在可销售范围内'
                 frappe.throw(msg)
+    def validate_warehouse(self):
+        super().validate_warehouse()
+        delivered_by_supplier = False
+        delivered_by_company = False
+        for d in self.get("items"):
+            if d.delivered_by_supplier:
+                delivered_by_supplier = True
+            else:
+                delivered_by_company = True
+            if (
+                (
+                    frappe.get_cached_value("Item", d.item_code, "is_stock_item") == 1
+                    or (
+                        self.has_product_bundle(d.item_code)
+                        and self.product_bundle_has_stock_item(d.item_code)
+                    )
+                )
+                and not d.warehouse
+                and not cint(d.delivered_by_supplier)
+            ):
+                frappe.throw(
+                    _("Delivery warehouse required for stock item {0}").format(d.item_code), WarehouseRequired
+                )
 
+            if d.stock_qty < 30 and not cint(d.delivered_by_supplier):
+                if '箱' in d.uom and d.qty >= 1:
+                    return
+                else:
+                    uom_avilable = frappe.db.exists('UOM Conversion Detail',
+                        {
+                            'parent': d.item_code,
+                            'parenttype': 'Item',
+                            'parentfield': 'uoms',
+                            'uom':['like',"%箱%"]
+                        })
+                    if uom_avilable:
+                        conversion_factor = frappe.db.get_value('UOM Conversion Detail',uom_avilable,'conversion_factor')
+                        if d.stock_qty >= conversion_factor:
+                            return
+                        else:
+                            sample_warehouse = frappe.db.exists('Warehouse',
+                                {
+                                    'company': self.company,
+                                    'for_sample': 1,
+                                    'is_group': 0,
+                                    'disabled': 0
+                                })
+                            if sample_warehouse:
+                                d.warehouse = sample_warehouse
+                                msg ="""<p>第{}行的物料{}被<b>更新到样品仓库{}</b></p>""".format(
+                                    frappe.bold(d.idx),
+                                    frappe.bold(d.item_code),
+                                    frappe.bold(sample_warehouse),
+                                )
+                                frappe.msgprint(msg,alert=True)
+                            else:
+                                msg = """
+                                    <p>第{}行的物料{}低于销售要求，且<b style="color:red">未找到样品仓库</b></p>
+                                    <p>单位:{}</p>
+                                    <p>销售数量:{}</p>
+                                    <p>库存单位数量:{}{}</p>
+                                    <p>请联系管理员检查配置</p>
+                                """.format(
+                                    frappe.bold(d.idx),
+                                    frappe.bold(d.item_code),
+                                    frappe.bold(d.uom),
+                                    frappe.bold(d.qty),
+                                    frappe.bold(d.stock_qty),
+                                    frappe.bold(d.stock_uom),
+                                )
+                                frappe.throw(msg)
+                    else:
+                        msg = """
+                            <p>第{}行的物料{}低于销售要求，且<b style="color:red">没有设置箱的转换系数</b></p>
+                            <p>单位:{}</p>
+                            <p>销售数量:{}</p>
+                            <p>库存单位数量:{}</p>
+                            <p>请联系管理员检查配置</p>
+                        """.format(
+                            frappe.bold(d.idx),
+                            frappe.bold(d.item_code),
+                            frappe.bold(d.uom),
+                            frappe.bold(d.qty),
+                            frappe.bold(d.stock_qty),
+                        )
+                        frappe.throw(msg,title=_('Error'))
+        if delivered_by_supplier and delivered_by_company:
+            frappe.throw(_("Cannot deliver both by supplier and company in same sales order"))
 def get_employee_all_leaders(employee, leaders=None):
     if leaders is None:
         leaders = []
