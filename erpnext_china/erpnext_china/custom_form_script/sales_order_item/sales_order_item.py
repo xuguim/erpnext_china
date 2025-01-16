@@ -13,16 +13,9 @@ class CustomSalesOrderItem(SalesOrderItem):
 	
 	@property
 	def rate_after_discount(self):
-		if self.is_new():
-			frappe.log('new')
-			return 0
-		so_info = frappe.get_all("Sales Order", filters={'name':self.parent}, fields=["grand_total","discount_amount"])[0]
-		frappe.log(so_info)
-		if flt(so_info.discount_amount) == 0 or flt(so_info.grand_total) == 0:
-			return self.rate
-		else:
-			return self.rate * ( 1 - self.discount_amount / so_info.grand_total)
-		
+		parent_doc = frappe.get_doc(self.parenttype,self.parent)
+		return self.rate * ( 1 - parent_doc.discount_amount / parent_doc.grand_total)
 	@property
 	def rate_after_discount_of_stock_uom(self):
-		return self.rate_after_discount / self.conversion_factor
+		parent_doc = frappe.get_doc(self.parenttype,self.parent)
+		return self.stock_uom_rate * ( 1 - parent_doc.discount_amount / parent_doc.grand_total)
