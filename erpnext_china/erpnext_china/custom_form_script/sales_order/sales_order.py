@@ -78,9 +78,17 @@ class CustomSalesOrder(SalesOrder):
             custom_freight = frappe.db.get_value('Sales Order', self.custom_original_sales_order, 'custom_freight')
             self.custom_freight = custom_freight
 
+    def set_state_and_city(self):
+        if self.is_new() and self.shipping_address_name:
+            address = frappe.db.get_value("Address", self.shipping_address_name, ["state", "city"], as_dict=True)
+            if address:
+                self.custom_state = address.state
+                self.custom_city = address.city
+
     def before_save(self):
         self.set_employee_and_department()
         self.set_freight()
+        self.set_state_and_city()
 
     def clear_drop_ship(self):
         for d in self.get("items"):
