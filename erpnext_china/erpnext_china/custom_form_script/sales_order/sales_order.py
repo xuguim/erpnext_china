@@ -88,13 +88,15 @@ class CustomSalesOrder(SalesOrder):
     def set_discount_amount_custom_after_distinct__amount_request(self):
         discount_amount = 0
         for d in self.get("items"):
-            discount_amount = discount_amount + d.custom_after_distinct__amount_request
+            discount_amount = discount_amount + (d.amount - d.custom_after_distinct__amount_request)
         self.discount_amount = discount_amount
 
     def before_save(self):
         self.set_employee_and_department()
         self.set_freight()
         self.set_state_and_city()
+        self.set_discount_amount_custom_after_distinct__amount_request()
+    def after_save(self):
         self.set_discount_amount_custom_after_distinct__amount_request()
 
     def clear_drop_ship(self):
