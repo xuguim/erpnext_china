@@ -14,21 +14,14 @@ class CustomSalesOrderItem(SalesOrderItem):
 	@property
 	def rate_after_discount(self):
 		try:
-			parent_doc = frappe.db.get_value(self.parenttype,self.parent, ["discount_amount", "grand_total"], as_dict=True)
-			if parent_doc:
-				return self.rate * ( 1 - parent_doc.discount_amount / parent_doc.grand_total)
-			else:
-				return 0
+
+			return self.rate * ( self.custom_after_distinct__amount_request / self.amount)
 		except:
 			return 0
 
 	@property
 	def rate_after_discount_of_stock_uom(self):
 		try:
-			parent_doc = frappe.db.get_value(self.parenttype,self.parent, ["discount_amount", "grand_total"], as_dict=True)
-			if parent_doc:
-				return self.stock_uom_rate * ( 1 - parent_doc.discount_amount / parent_doc.grand_total)
-			else:
-				return 0
+			return self.stock_uom_rate * (self.custom_after_distinct__amount_request / self.amount)
 		except:
 			return 0
